@@ -1,0 +1,238 @@
+2026/04/07 周二 11:01:30.90 - Morning automation started 
+^C2026/04/07 周二 11:02:10.82 - Morning automation started 
+2026/04/07 周二 11:02:18.03 - Morning automation started 
+[2026-04-07 11:02:18] [INFO] ============================================================
+[2026-04-07 11:02:18] [INFO] 学术自动化助手启动
+[2026-04-07 11:02:18] [INFO] ============================================================
+[2026-04-07 11:02:18] [INFO] 配置加载完成
+[2026-04-07 11:02:18] [INFO] 翻译功能: 关闭 (纯英文输出)
+[2026-04-07 11:02:18] [INFO] 开始爬取 2 个学术信息源...
+[2026-04-07 11:02:18] [INFO] 正在爬取: arXiv AI
+[2026-04-07 11:02:18] [INFO] arXiv AI 获取 10 条
+[2026-04-07 11:02:20] [INFO] 正在爬取: PapersWithCode
+[2026-04-07 11:02:50] [ERROR] 获取失败 https://paperswithcode.com/api/v1/papers/?ordering=-published&items_per_page=10: <urlopen error timed out>
+[2026-04-07 11:02:52] [INFO] 爬取完成，共获取 10 条学术资讯
+[2026-04-07 11:02:52] [INFO] 学术简报已保存: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\academic_briefing_20260407.md
+[2026-04-07 11:02:52] [INFO] 学术简报已生成: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\academic_briefing_20260407.md
+[2026-04-07 11:02:52] [INFO] 正在连接邮件服务器 smtp.qq.com:587...
+[2026-04-07 11:02:53] [INFO] 邮件发送成功！收件人：yg1114702713@qq.com
+
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\daily_assistant.py", line 922, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\daily_assistant.py", line 890, in main
+    print("\U0001f4cb 简报预览（前3条）:")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'gbk' codec can't encode character '\U0001f4cb' in position 0: illegal multibyte sequence
+[2026-04-07 11:02:53] [INFO] ============================================================
+[2026-04-07 11:02:53] [INFO] 课程任务管理系统启动
+[2026-04-07 11:02:53] [INFO] ============================================================
+[2026-04-07 11:02:53] [INFO] 正在生成今日计划...
+[2026-04-07 11:02:53] [INFO] 今日计划已保存: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\daily_plan_20260407.html
+[2026-04-07 11:02:53] [INFO] 正在发送邮件到 yg1114702713@qq.com...
+[2026-04-07 11:02:54] [INFO] 邮件发送成功！
+[2026-04-07 11:02:54] [INFO] ============================================================
+[2026-04-07 11:02:54] [INFO] 课程任务管理系统执行完毕
+[2026-04-07 11:02:54] [INFO] ============================================================
+2026/04/08 周三 13:03:58.73 - Morning automation started 
+[2026-04-08 13:04:02] [INFO] ============================================================
+[2026-04-08 13:04:02] [INFO] 学术自动化助手启动
+[2026-04-08 13:04:02] [INFO] ============================================================
+[2026-04-08 13:04:02] [INFO] 配置加载完成
+[2026-04-08 13:04:02] [INFO] 翻译功能: 关闭 (纯英文输出)
+[2026-04-08 13:04:02] [INFO] 开始爬取 4 个学术信息源...
+[2026-04-08 13:04:02] [INFO] 正在爬取: arXiv AI
+[2026-04-08 13:04:03] [INFO] arXiv AI 获取 10 条
+[2026-04-08 13:04:04] [INFO] 正在爬取: Semantic Scholar
+[2026-04-08 13:04:05] [INFO] Semantic Scholar 获取 0 条
+[2026-04-08 13:04:07] [INFO] 正在爬取: AMiner
+[2026-04-08 13:04:07] [INFO] AMiner 获取 0 条
+[2026-04-08 13:04:09] [INFO] 正在爬取: The Gradient
+[2026-04-08 13:04:10] [INFO] The Gradient 获取 2 条
+[2026-04-08 13:04:12] [INFO] 爬取完成，共获取 12 条学术资讯
+[2026-04-08 13:04:12] [INFO] 学术简报已保存: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\academic_briefing_20260408.md
+[2026-04-08 13:04:12] [INFO] 学术简报已生成: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\academic_briefing_20260408.md
+[2026-04-08 13:04:12] [INFO] 正在连接邮件服务器 smtp.qq.com:587...
+[2026-04-08 13:04:13] [INFO] 邮件发送成功！收件人：yg1114702713@qq.com
+
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\daily_assistant.py", line 1142, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\daily_assistant.py", line 1110, in main
+    print("\U0001f4cb 简报预览（前3条）:")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'gbk' codec can't encode character '\U0001f4cb' in position 0: illegal multibyte sequence
+[2026-04-08 13:04:13] [INFO] ============================================================
+[2026-04-08 13:04:13] [INFO] 课程任务管理系统启动
+[2026-04-08 13:04:13] [INFO] ============================================================
+[2026-04-08 13:04:13] [INFO] 正在生成今日计划...
+[2026-04-08 13:04:13] [INFO] 今日计划已保存: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\daily_plan_20260408.html
+[2026-04-08 13:04:13] [INFO] 正在发送邮件到 yg1114702713@qq.com...
+[2026-04-08 13:04:14] [INFO] 邮件发送成功！
+[2026-04-08 13:04:14] [INFO] ============================================================
+[2026-04-08 13:04:14] [INFO] 课程任务管理系统执行完毕
+[2026-04-08 13:04:14] [INFO] ============================================================
+2026/04/08 周三 13:04:27.84 - Morning automation started 
+[2026-04-08 13:04:28] [INFO] ============================================================
+[2026-04-08 13:04:28] [INFO] 学术自动化助手启动
+[2026-04-08 13:04:28] [INFO] ============================================================
+[2026-04-08 13:04:28] [INFO] 配置加载完成
+[2026-04-08 13:04:28] [INFO] 翻译功能: 关闭 (纯英文输出)
+[2026-04-08 13:04:28] [INFO] 开始爬取 4 个学术信息源...
+[2026-04-08 13:04:28] [INFO] 正在爬取: arXiv AI
+[2026-04-08 13:04:28] [INFO] arXiv AI 获取 10 条
+[2026-04-08 13:04:30] [INFO] 正在爬取: Semantic Scholar
+[2026-04-08 13:04:30] [INFO] Semantic Scholar 获取 0 条
+[2026-04-08 13:04:32] [INFO] 正在爬取: AMiner
+[2026-04-08 13:04:32] [INFO] AMiner 获取 0 条
+[2026-04-08 13:04:33] [INFO] 正在爬取: The Gradient
+[2026-04-08 13:04:34] [INFO] The Gradient 获取 2 条
+[2026-04-08 13:04:36] [INFO] 爬取完成，共获取 12 条学术资讯
+[2026-04-08 13:04:36] [INFO] 学术简报已保存: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\academic_briefing_20260408.md
+[2026-04-08 13:04:36] [INFO] 学术简报已生成: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\academic_briefing_20260408.md
+[2026-04-08 13:04:36] [INFO] 正在连接邮件服务器 smtp.qq.com:587...
+[2026-04-08 13:04:37] [INFO] 邮件发送成功！收件人：yg1114702713@qq.com
+
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\daily_assistant.py", line 1142, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\daily_assistant.py", line 1110, in main
+    print("\U0001f4cb 简报预览（前3条）:")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'gbk' codec can't encode character '\U0001f4cb' in position 0: illegal multibyte sequence
+[2026-04-08 13:04:37] [INFO] ============================================================
+[2026-04-08 13:04:37] [INFO] 课程任务管理系统启动
+[2026-04-08 13:04:37] [INFO] ============================================================
+[2026-04-08 13:04:37] [INFO] 正在生成今日计划...
+[2026-04-08 13:04:37] [INFO] 今日计划已保存: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\daily_plan_20260408.html
+[2026-04-08 13:04:37] [INFO] 正在发送邮件到 yg1114702713@qq.com...
+[2026-04-08 13:04:38] [INFO] 邮件发送成功！
+[2026-04-08 13:04:38] [INFO] ============================================================
+[2026-04-08 13:04:38] [INFO] 课程任务管理系统执行完毕
+[2026-04-08 13:04:38] [INFO] ============================================================
+2026/04/09 周四 12:23:25.73 - Morning automation started 
+[2026-04-09 12:23:26] [INFO] ============================================================
+[2026-04-09 12:23:26] [INFO] 学术自动化助手启动
+[2026-04-09 12:23:26] [INFO] ============================================================
+[2026-04-09 12:23:26] [INFO] 配置加载完成
+[2026-04-09 12:23:26] [INFO] 翻译功能: 关闭 (纯英文输出)
+[2026-04-09 12:23:26] [INFO] 开始爬取 4 个学术信息源...
+[2026-04-09 12:23:26] [INFO] 正在爬取: arXiv AI
+[2026-04-09 12:23:26] [INFO] arXiv AI 获取 10 条
+[2026-04-09 12:23:28] [INFO] 正在爬取: Semantic Scholar
+[2026-04-09 12:23:29] [INFO] Semantic Scholar 获取 0 条
+[2026-04-09 12:23:30] [INFO] 正在爬取: AMiner
+[2026-04-09 12:23:30] [INFO] AMiner 获取 0 条
+[2026-04-09 12:23:32] [INFO] 正在爬取: The Gradient
+[2026-04-09 12:23:34] [INFO] The Gradient 获取 2 条
+[2026-04-09 12:23:35] [INFO] 爬取完成，共获取 12 条学术资讯
+[2026-04-09 12:23:35] [INFO] 学术简报已保存: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\academic_briefing_20260409.md
+[2026-04-09 12:23:35] [INFO] 学术简报已生成: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\academic_briefing_20260409.md
+[2026-04-09 12:23:35] [INFO] 正在连接邮件服务器 smtp.qq.com:587...
+[2026-04-09 12:23:36] [INFO] 邮件发送成功！收件人：yg1114702713@qq.com
+
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\daily_assistant.py", line 1142, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\daily_assistant.py", line 1110, in main
+    print("\U0001f4cb 简报预览（前3条）:")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'gbk' codec can't encode character '\U0001f4cb' in position 0: illegal multibyte sequence
+[2026-04-09 12:23:37] [INFO] ============================================================
+[2026-04-09 12:23:37] [INFO] 课程任务管理系统启动
+[2026-04-09 12:23:37] [INFO] ============================================================
+[2026-04-09 12:23:37] [INFO] 正在生成今日计划...
+[2026-04-09 12:23:37] [INFO] 今日计划已保存: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\daily_plan_20260409.html
+[2026-04-09 12:23:37] [INFO] 正在发送邮件到 yg1114702713@qq.com...
+[2026-04-09 12:23:38] [INFO] 邮件发送成功！
+[2026-04-09 12:23:38] [INFO] ============================================================
+[2026-04-09 12:23:38] [INFO] 课程任务管理系统执行完毕
+[2026-04-09 12:23:38] [INFO] ============================================================
+2026/04/10 周五 17:24:46.32 - Morning automation started 
+[2026-04-10 17:24:46] [INFO] ============================================================
+[2026-04-10 17:24:46] [INFO] 学术自动化助手启动
+[2026-04-10 17:24:46] [INFO] ============================================================
+[2026-04-10 17:24:46] [INFO] 配置加载完成
+[2026-04-10 17:24:46] [INFO] 翻译功能: 关闭 (纯英文输出)
+[2026-04-10 17:24:46] [INFO] 开始爬取 4 个学术信息源...
+[2026-04-10 17:24:46] [INFO] 正在爬取: arXiv AI
+[2026-04-10 17:24:48] [INFO] arXiv AI 获取 10 条
+[2026-04-10 17:24:49] [INFO] 正在爬取: Semantic Scholar
+[2026-04-10 17:24:51] [INFO] Semantic Scholar 获取 0 条
+[2026-04-10 17:24:52] [INFO] 正在爬取: AMiner
+[2026-04-10 17:24:54] [INFO] AMiner 获取 0 条
+[2026-04-10 17:24:55] [INFO] 正在爬取: The Gradient
+[2026-04-10 17:24:58] [INFO] The Gradient 获取 2 条
+[2026-04-10 17:24:59] [INFO] 爬取完成，共获取 12 条学术资讯
+[2026-04-10 17:24:59] [INFO] 学术简报已保存: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\academic_briefing_20260410.md
+[2026-04-10 17:24:59] [INFO] 学术简报已生成: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\academic_briefing_20260410.md
+[2026-04-10 17:24:59] [INFO] 正在连接邮件服务器 smtp.qq.com:587...
+[2026-04-10 17:25:01] [INFO] 邮件发送成功！收件人：yg1114702713@qq.com
+
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\daily_assistant.py", line 1142, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\daily_assistant.py", line 1110, in main
+    print("\U0001f4cb 简报预览（前3条）:")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'gbk' codec can't encode character '\U0001f4cb' in position 0: illegal multibyte sequence
+[2026-04-10 17:25:02] [INFO] ============================================================
+[2026-04-10 17:25:02] [INFO] 课程任务管理系统启动
+[2026-04-10 17:25:02] [INFO] ============================================================
+[2026-04-10 17:25:02] [INFO] 正在生成今日计划...
+[2026-04-10 17:25:02] [INFO] 今日计划已保存: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\daily_plan_20260410.html
+[2026-04-10 17:25:02] [INFO] 正在发送邮件到 yg1114702713@qq.com...
+[2026-04-10 17:25:04] [INFO] 邮件发送成功！
+[2026-04-10 17:25:04] [INFO] ============================================================
+[2026-04-10 17:25:04] [INFO] 课程任务管理系统执行完毕
+[2026-04-10 17:25:04] [INFO] ============================================================
+2026/04/11 周六  0:02:10.75 - Morning automation started 
+[2026-04-11 00:02:11] [INFO] ============================================================
+[2026-04-11 00:02:11] [INFO] 学术自动化助手启动
+[2026-04-11 00:02:11] [INFO] ============================================================
+[2026-04-11 00:02:11] [INFO] 配置加载完成
+[2026-04-11 00:02:11] [INFO] 翻译功能: 关闭 (纯英文输出)
+[2026-04-11 00:02:11] [INFO] 开始爬取 4 个学术信息源...
+[2026-04-11 00:02:11] [INFO] 正在爬取: arXiv AI
+[2026-04-11 00:02:11] [INFO] arXiv AI 获取 10 条
+[2026-04-11 00:02:13] [INFO] 正在爬取: Semantic Scholar
+[2026-04-11 00:02:14] [INFO] Semantic Scholar 获取 0 条
+[2026-04-11 00:02:15] [INFO] 正在爬取: AMiner
+[2026-04-11 00:02:15] [INFO] AMiner 获取 0 条
+[2026-04-11 00:02:17] [INFO] 正在爬取: The Gradient
+[2026-04-11 00:02:18] [INFO] The Gradient 获取 2 条
+[2026-04-11 00:02:20] [INFO] 爬取完成，共获取 12 条学术资讯
+[2026-04-11 00:02:20] [INFO] 学术简报已保存: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\academic_briefing_20260411.md
+[2026-04-11 00:02:20] [INFO] 学术简报已生成: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\academic_briefing_20260411.md
+[2026-04-11 00:02:20] [INFO] 正在连接邮件服务器 smtp.qq.com:587...
+[2026-04-11 00:02:21] [INFO] 邮件发送成功！收件人：yg1114702713@qq.com
+
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\daily_assistant.py", line 1142, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\daily_assistant.py", line 1110, in main
+    print("\U0001f4cb 简报预览（前3条）:")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'gbk' codec can't encode character '\U0001f4cb' in position 0: illegal multibyte sequence
+[2026-04-11 00:02:21] [INFO] ============================================================
+[2026-04-11 00:02:21] [INFO] 课程任务管理系统启动
+[2026-04-11 00:02:21] [INFO] ============================================================
+[2026-04-11 00:02:21] [INFO] 正在生成今日计划...
+[2026-04-11 00:02:21] [INFO] 今日计划已保存: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\data\daily_plan_20260411.html
+[2026-04-11 00:02:21] [INFO] 正在发送邮件到 yg1114702713@qq.com...
+[2026-04-11 00:02:22] [INFO] 邮件发送成功！
+[2026-04-11 00:02:22] [INFO] ============================================================
+[2026-04-11 00:02:22] [INFO] 课程任务管理系统执行完毕
+[2026-04-11 00:02:22] [INFO] ============================================================

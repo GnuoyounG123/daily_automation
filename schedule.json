@@ -1,0 +1,40 @@
+{
+  "semester": "2024-2025学年春夏学期",
+  "week_schedule": {
+    "Monday": [
+      {"name": "微积分（甲）II", "time": "10:00-12:25", "location": "紫金港东2-203", "teacher": "毕惟红"},
+      {"name": "军事理论", "time": "13:25-15:05", "location": "紫金港西1-101", "teacher": "沈莉萍"},
+      {"name": "篮球（中级）", "time": "16:15-17:55", "location": "紫金港安中球场（篮球场）", "teacher": "金慧娟"},
+      {"name": "身体素质课", "time": "18:50-19:35", "location": "紫金港田径场（东）", "teacher": "金慧娟"}
+    ],
+    "Tuesday": [
+      {"name": "政治学原理", "time": "10:00-12:25", "location": "紫金港东1A-212", "teacher": "郎友兴"},
+      {"name": "会计学", "time": "13:25-16:15", "location": "紫金港东1A-403", "teacher": "吴姝杰"}
+    ],
+    "Wednesday": [
+      {"name": "微积分（甲）II", "time": "08:00-09:40", "location": "紫金港东2-203", "teacher": "毕惟红"},
+      {"name": "线性代数（甲）", "time": "10:00-12:25", "location": "紫金港东2-202", "teacher": "黄正达"},
+      {"name": "线性代数（甲）", "time": "16:15-17:05", "location": "紫金港东2-202", "teacher": "黄正达"}
+    ],
+    "Thursday": [
+      {"name": "微观经济学（甲）", "time": "14:45-17:05", "location": "紫金港东1A-307", "teacher": "许云华"},
+      {"name": "中国土地制度问题概论", "time": "18:50-20:30", "location": "紫金港东6-225", "teacher": "田传浩、张翔"}
+    ],
+    "Friday": [
+      {"name": "人工智能基础（B）", "time": "08:00-09:40", "location": "紫金港东1A-207", "teacher": "卢圣华"}
+    ],
+    "Saturday": [],
+    "Sunday": [
+      {"name": "形势与政策I", "time": "18:50-20:30", "location": "紫金港东2-203", "teacher": "沈黎勇、李济沅", "note": "单周上课"}
+    ]
+  },
+  "review_tasks": {
+    "会计学": {"duration": "~2小时", "priority": "中", "type": "复习"},
+    "微观经济学": {"duration": "~2小时", "priority": "中", "type": "复习"},
+    "微积分": {"duration": "3-5小时", "priority": "高", "type": "大量复习"},
+    "线性代数": {"duration": "3-5小时", "priority": "高", "type": "大量复习"}
+  },
+  "daily_routine": {
+    "跑步": {"status": "继续", "frequency": "每日/定期"}
+  }
+}

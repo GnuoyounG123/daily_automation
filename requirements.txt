@@ -1,0 +1,2 @@
+# Daily Automation 依赖
+streamlit>=1.28.0

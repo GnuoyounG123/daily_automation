@@ -1,0 +1,200 @@
+@echo off
+chcp 65001 >nul
+title Daily Automation Installer
+
+echo.
+echo ========================================
+echo Daily Automation One-Click Installer
+echo ========================================
+echo.
+
+:: Check admin rights
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [WARNING] Administrator rights required
+    echo Please right-click this file and select "Run as administrator"
+    pause
+    exit /b 1
+)
+
+:: Select install directory
+set default_dir=C:\DailyAutomation
+echo Default install directory: %default_dir%
+set /p install_dir="Enter install directory (press Enter for default): "
+
+if "%install_dir%"=="" set install_dir=%default_dir%
+
+echo.
+echo Install directory: %install_dir%
+echo.
+
+:: Confirm installation
+set /p confirm="Continue installation? (Y/N): "
+if /i "%confirm%" neq "Y" (
+    echo Installation cancelled
+    pause
+    exit /b 0
+)
+
+:: Ask about desktop shortcut
+set /p create_shortcut="Create desktop shortcut? (Y/N, default Y): "
+if /i "%create_shortcut%"=="" set create_shortcut=Y
+
+:: Create directories
+echo.
+echo [1/4] Creating directories...
+if not exist "%install_dir%" (
+    mkdir "%install_dir%"
+    if errorlevel 1 (
+        echo [ERROR] Cannot create directory: %install_dir%
+        echo Please check path permissions or choose another directory
+        pause
+        exit /b 1
+    )
+) else (
+    echo [INFO] Directory already exists: %install_dir%
+)
+
+if not exist "%install_dir%\data" (
+    mkdir "%install_dir%\data"
+)
+
+if not exist "%install_dir%\logs" (
+    mkdir "%install_dir%\logs"
+)
+
+:: Copy files
+echo [2/4] Copying files...
+
+:: Check required files
+set "file_missing=0"
+if not exist "%~dp0DailyAutomation.exe" (
+    echo [ERROR] DailyAutomation.exe not found!
+    set "file_missing=1"
+)
+if not exist "%~dp0config.json" (
+    echo [WARNING] config.json not found, will use default config
+)
+
+if %file_missing% equ 1 (
+    echo [ERROR] Required files missing, cannot continue
+    pause
+    exit /b 1
+)
+
+:: Copy main program
+echo Copying DailyAutomation.exe...
+copy "%~dp0DailyAutomation.exe" "%install_dir%"
+if errorlevel 1 (
+    echo [ERROR] DailyAutomation.exe copy failed!
+    pause
+    exit /b 1
+)
+
+:: Copy config files
+if exist "%~dp0config.json" (
+    echo Copying config.json...
+    copy "%~dp0config.json" "%install_dir%"
+)
+
+if exist "%~dp0schedule.json" (
+    echo Copying schedule.json...
+    copy "%~dp0schedule.json" "%install_dir%"
+)
+
+if exist "%~dp0weekly_tasks.json" (
+    echo Copying weekly_tasks.json...
+    copy "%~dp0weekly_tasks.json" "%install_dir%"
+)
+
+:: Copy Python scripts if present
+if exist "%~dp0daily_assistant.py" (
+    echo Copying daily_assistant.py...
+    copy "%~dp0daily_assistant.py" "%install_dir%"
+)
+
+if exist "%~dp0config_manager.py" (
+    echo Copying config_manager.py...
+    copy "%~dp0config_manager.py" "%install_dir%"
+)
+
+:: Create desktop shortcut
+if /i "%create_shortcut%"=="Y" (
+    echo [3/4] Creating desktop shortcut...
+    set "desktop=%USERPROFILE%\Desktop"
+    set "shortcut=%desktop%\DailyAutomation.lnk"
+
+    if exist "%shortcut%" (
+        echo [INFO] Desktop shortcut already exists, skipping
+    ) else (
+        echo Using PowerShell to create shortcut...
+
+        powershell -ExecutionPolicy Bypass -NoProfile -Command ^
+            "$WshShell = New-Object -ComObject WScript.Shell; ^
+             $Shortcut = $WshShell.CreateShortcut('%shortcut%'); ^
+             $Shortcut.TargetPath = '%install_dir%\DailyAutomation.exe'; ^
+             $Shortcut.WorkingDirectory = '%install_dir%'; ^
+             $Shortcut.Description = 'Daily Automation Assistant'; ^
+             $Shortcut.Save()"
+
+        if errorlevel 1 (
+            echo [WARNING] PowerShell command failed
+            echo Trying alternative method...
+
+            mklink "%shortcut%" "%install_dir%\DailyAutomation.exe" >nul 2>&1
+            if errorlevel 1 (
+                echo [WARNING] Shortcut creation failed
+                echo Please create manually: right-click DailyAutomation.exe -
+                echo Send to -
+                echo Desktop (create shortcut)
+            ) else (
+                echo [OK] Created shortcut using alternative method
+            )
+        ) else (
+            if exist "%shortcut%" (
+                echo [OK] Desktop shortcut created successfully
+            ) else (
+                echo [WARNING] PowerShell ran but shortcut not created
+                echo Possible reasons: antivirus blocking or insufficient permissions
+            )
+        )
+    )
+) else (
+    echo [SKIP] Skipping desktop shortcut creation
+)
+
+:: Set file permissions
+echo [4/4] Setting file permissions...
+icacls "%install_dir%" /grant Users:(OI)(CI)F /T >nul 2>&1
+if errorlevel 1 (
+    echo [INFO] Permission setting failed (may require higher privileges or not supported)
+) else (
+    echo [INFO] File permissions set
+)
+
+:: Set shortcut display info
+if /i "%create_shortcut%"=="Y" (
+    set "shortcut_info=DailyAutomation.lnk"
+    set "step1_info=Double-click desktop shortcut to start"
+) else (
+    set "shortcut_info=(not created)"
+    set "step1_info=Go to install directory and run DailyAutomation.exe"
+)
+
+:: Complete
+echo.
+echo ========================================
+echo Installation Complete!
+echo ========================================
+echo.
+echo Program location: %install_dir%
+echo Desktop shortcut: %shortcut_info%
+echo.
+echo Next steps:
+echo 1. %step1_info%
+echo 2. Configure email authorization code (required)
+echo 3. Test run once
+echo.
+
+echo Press any key to exit...
+pause >nul
