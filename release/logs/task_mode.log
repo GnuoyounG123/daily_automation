@@ -10,3 +10,8 @@ app_dir: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\dail
 app_dir: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\release
 [2026-04-11T02:44:10.427750] 任务模式启动
 app_dir: C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\daily_automation\release
+[2026-04-12T00:52:40.523483] 任务模式启动
+app_dir: C:\Users\lenovo\Projects\daily_automation\release
+[2026-04-12T01:22:37.972783] 任务模式启动
+app_dir: C:\Users\lenovo\Projects\daily_automation\release
+sys.argv: ['C:\\Users\\lenovo\\Projects\\daily_automation\\release\\DailyAutomation.exe', '--task', 'remind']

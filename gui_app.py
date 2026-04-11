@@ -100,7 +100,8 @@ class DailyAutomationApp:
         btn_frame = ttk.Frame(action_frame)
         btn_frame.pack(pady=15)
 
-        ttk.Button(btn_frame, text="▶️ 立即运行一次", command=self.run_once, width=18).pack(side='left', padx=10)
+        ttk.Button(btn_frame, text="📚 学术简报生成", command=self.run_crawl, width=18).pack(side='left', padx=10)
+        ttk.Button(btn_frame, text="⏰ 每日日程提醒", command=self.run_remind, width=18).pack(side='left', padx=10)
         ttk.Button(btn_frame, text="📂 打开数据目录", command=self.open_data_dir, width=18).pack(side='left', padx=10)
         ttk.Button(btn_frame, text="📤 导出配置", command=self.export_config, width=18).pack(side='left', padx=10)
         ttk.Button(btn_frame, text="📥 导入配置", command=self.import_config, width=18).pack(side='left', padx=10)
@@ -652,9 +653,7 @@ Outlook: smtp-mail.outlook.com 端口587
 
                     result = subprocess.run(
                         [exe_path, "--task"],
-                        capture_output=True,
-                        text=True,
-                        cwd=str(self.app_dir),
+                        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(self.app_dir),
                         timeout=600,
                         startupinfo=startupinfo,
                         creationflags=subprocess.CREATE_NO_WINDOW
@@ -665,8 +664,7 @@ Outlook: smtp-mail.outlook.com 端口587
                     log(f"开发模式，运行: {script_path}")
                     result = subprocess.run(
                         [sys.executable, str(script_path), "all"],
-                        capture_output=True,
-                        text=True,
+                        capture_output=True, text=True, encoding="utf-8", errors="replace",
                         cwd=str(self.app_dir),
                         timeout=600
                     )
@@ -680,6 +678,162 @@ Outlook: smtp-mail.outlook.com 端口587
                 if result.returncode == 0:
                     log("任务执行成功")
                     self.root.after(0, lambda: self.status_var.set("运行完成"))
+                    self.root.after(0, self.refresh_home_status)
+                else:
+                    log(f"任务执行失败: {result.returncode}")
+                    self.root.after(0, lambda: messagebox.showerror("运行错误", f"任务执行失败\n{result.stderr}"))
+                    self.root.after(0, lambda: self.status_var.set("运行失败"))
+
+                log("=== 任务结束 ===\n")
+
+            except subprocess.TimeoutExpired:
+                log("任务超时")
+                self.root.after(0, lambda: messagebox.showerror("错误", "任务执行超时"))
+                self.root.after(0, lambda: self.status_var.set("运行失败"))
+            except Exception as e:
+                import traceback
+                log(f"异常: {traceback.format_exc()}")
+                self.root.after(0, lambda: messagebox.showerror("错误", f"执行失败:\n{str(e)}"))
+                self.root.after(0, lambda: self.status_var.set("运行失败"))
+
+        thread = threading.Thread(target=run_task, daemon=True)
+        thread.start()
+
+    def run_crawl(self):
+        """运行学术简报生成"""
+        self.status_var.set("正在生成学术简报...")
+        self.root.update()
+
+        def run_task():
+            try:
+                # 确保日志目录存在
+                log_dir = self.app_dir / "logs"
+                log_dir.mkdir(exist_ok=True)
+
+                debug_log = log_dir / "gui_debug.log"
+                def log(msg):
+                    with open(debug_log, 'a', encoding='utf-8') as f:
+                        f.write(f"[{datetime.now().isoformat()}] {msg}\n")
+
+                log("=== 任务开始 ===")
+                log(f"app_dir: {self.app_dir}")
+
+                # 使用子进程运行任务，完全隔离
+                if getattr(sys, 'frozen', False):
+                    # 打包环境：运行自身，传递 --task 参数
+                    exe_path = sys.executable
+                    log(f"打包模式，运行: {exe_path} --task crawl")
+
+                    # 使用 CREATE_NO_WINDOW 标志避免弹出控制台窗口
+                    startupinfo = subprocess.STARTUPINFO()
+                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    startupinfo.wShowWindow = subprocess.SW_HIDE
+
+                    result = subprocess.run(
+                        [exe_path, "--task", "crawl"],
+                        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(self.app_dir),
+                        timeout=600,
+                        startupinfo=startupinfo,
+                        creationflags=subprocess.CREATE_NO_WINDOW
+                    )
+                else:
+                    # 开发环境：运行 daily_assistant.py
+                    script_path = self.app_dir / "daily_assistant.py"
+                    log(f"开发模式，运行: {script_path} crawl")
+                    result = subprocess.run(
+                        [sys.executable, str(script_path), "crawl"],
+                        capture_output=True, text=True, encoding="utf-8", errors="replace",
+                        cwd=str(self.app_dir),
+                        timeout=600
+                    )
+
+                log(f"返回码: {result.returncode}")
+                if result.stdout:
+                    log(f"输出: {result.stdout[:500]}")
+                if result.stderr:
+                    log(f"错误: {result.stderr[:500]}")
+
+                if result.returncode == 0:
+                    log("任务执行成功")
+                    self.root.after(0, lambda: self.status_var.set("学术简报生成完成"))
+                    self.root.after(0, self.refresh_home_status)
+                else:
+                    log(f"任务执行失败: {result.returncode}")
+                    self.root.after(0, lambda: messagebox.showerror("运行错误", f"任务执行失败\n{result.stderr}"))
+                    self.root.after(0, lambda: self.status_var.set("运行失败"))
+
+                log("=== 任务结束 ===\n")
+
+            except subprocess.TimeoutExpired:
+                log("任务超时")
+                self.root.after(0, lambda: messagebox.showerror("错误", "任务执行超时"))
+                self.root.after(0, lambda: self.status_var.set("运行失败"))
+            except Exception as e:
+                import traceback
+                log(f"异常: {traceback.format_exc()}")
+                self.root.after(0, lambda: messagebox.showerror("错误", f"执行失败:\n{str(e)}"))
+                self.root.after(0, lambda: self.status_var.set("运行失败"))
+
+        thread = threading.Thread(target=run_task, daemon=True)
+        thread.start()
+
+    def run_remind(self):
+        """运行每日日程提醒"""
+        self.status_var.set("正在检查日程提醒...")
+        self.root.update()
+
+        def run_task():
+            try:
+                # 确保日志目录存在
+                log_dir = self.app_dir / "logs"
+                log_dir.mkdir(exist_ok=True)
+
+                debug_log = log_dir / "gui_debug.log"
+                def log(msg):
+                    with open(debug_log, 'a', encoding='utf-8') as f:
+                        f.write(f"[{datetime.now().isoformat()}] {msg}\n")
+
+                log("=== 任务开始 ===")
+                log(f"app_dir: {self.app_dir}")
+
+                # 使用子进程运行任务，完全隔离
+                if getattr(sys, 'frozen', False):
+                    # 打包环境：运行自身，传递 --task 参数
+                    exe_path = sys.executable
+                    log(f"打包模式，运行: {exe_path} --task remind")
+
+                    # 使用 CREATE_NO_WINDOW 标志避免弹出控制台窗口
+                    startupinfo = subprocess.STARTUPINFO()
+                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    startupinfo.wShowWindow = subprocess.SW_HIDE
+
+                    result = subprocess.run(
+                        [exe_path, "--task", "remind"],
+                        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(self.app_dir),
+                        timeout=600,
+                        startupinfo=startupinfo,
+                        creationflags=subprocess.CREATE_NO_WINDOW
+                    )
+                else:
+                    # 开发环境：运行 daily_assistant.py
+                    script_path = self.app_dir / "daily_assistant.py"
+                    log(f"开发模式，运行: {script_path} remind")
+                    result = subprocess.run(
+                        [sys.executable, str(script_path), "remind"],
+                        capture_output=True, text=True, encoding="utf-8", errors="replace",
+                        cwd=str(self.app_dir),
+                        timeout=600
+                    )
+
+                log(f"返回码: {result.returncode}")
+                if result.stdout:
+                    log(f"输出: {result.stdout[:500]}")
+                if result.stderr:
+                    log(f"错误: {result.stderr[:500]}")
+
+                if result.returncode == 0:
+                    log("任务执行成功")
+                    self.root.after(0, lambda: self.status_var.set("日程提醒检查完成"))
                     self.root.after(0, self.refresh_home_status)
                 else:
                     log(f"任务执行失败: {result.returncode}")
@@ -911,11 +1065,13 @@ def run_task_mode():
     with open(log_dir / "task_mode.log", 'a', encoding='utf-8') as f:
         f.write(f"[{datetime.now().isoformat()}] 任务模式启动\n")
         f.write(f"app_dir: {app_dir}\n")
+        f.write(f"sys.argv: {sys.argv}\n")
 
     # 导入并运行任务
     sys.path.insert(0, str(app_dir))
     import daily_assistant
-    daily_assistant.main(mode="all")
+    mode = sys.argv[2] if len(sys.argv) > 2 else "all"
+    daily_assistant.main(mode=mode)
 
 
 def main():

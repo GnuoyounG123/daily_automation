@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Daily Automation 配置中心
@@ -70,19 +70,23 @@ if page == "🏠 首页":
 
     # 快速操作
     st.subheader("🚀 快速操作")
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        if st.button("▶️ 立即运行一次", use_container_width=True):
-            st.info("请在命令行运行: python daily_assistant.py")
+        if st.button("📚 学术简报生成", use_container_width=True):
+            st.info("请在命令行运行: python daily_assistant.py crawl")
 
     with col2:
+        if st.button("⏰ 每日日程提醒", use_container_width=True):
+            st.info("请在命令行运行: python daily_assistant.py remind")
+
+    with col3:
         if st.button("🔄 重置为默认配置", use_container_width=True):
             config_manager.reset_to_default()
             st.success("已重置为默认配置")
             st.rerun()
 
-    with col3:
+    with col4:
         if st.button("📥 导出当前配置", use_container_width=True):
             data = config_manager.export_all_config()
             st.download_button(
@@ -124,10 +128,10 @@ elif page == "📰 新闻源管理":
                 with col1:
                     new_name = st.text_input("名称", source['name'], key=f"name_{i}", label_visibility="collapsed")
 
-                with col2:
+                with col3:
                     new_url = st.text_input("URL", source['url'], key=f"url_{i}", label_visibility="collapsed")
 
-                with col3:
+                with col4:
                     new_type = st.selectbox(
                         "类型",
                         ["rss", "web", "json"],
@@ -172,7 +176,7 @@ elif page == "📰 新闻源管理":
             new_source_name = st.text_input("名称", placeholder="例如: arXiv AI")
             new_source_url = st.text_input("URL", placeholder="例如: http://export.arxiv.org/api/...")
 
-        with col2:
+        with col3:
             new_source_type = st.selectbox("类型", ["rss", "web", "json"])
             new_source_enabled = st.checkbox("启用", value=True)
 
@@ -206,7 +210,7 @@ elif page == "🔑 关键词设置":
             key="en_keywords"
         )
 
-    with col2:
+    with col3:
         st.subheader("中文关键词")
         cn_keywords = keywords_data.get('keywords_cn', [])
         cn_text = st.text_area(
@@ -261,7 +265,7 @@ elif page == "⏰ 提醒管理":
                         label_visibility="collapsed"
                     )
 
-                with col2:
+                with col3:
                     new_title = st.text_input(
                         "标题",
                         reminder['title'],
@@ -269,7 +273,7 @@ elif page == "⏰ 提醒管理":
                         label_visibility="collapsed"
                     )
 
-                with col3:
+                with col4:
                     new_desc = st.text_input(
                         "描述",
                         reminder['description'],
@@ -299,7 +303,7 @@ elif page == "⏰ 提醒管理":
             remind_time = st.text_input("时间 (HH:MM)", value="09:00")
             remind_title = st.text_input("标题", placeholder="例如: 早晨学习")
 
-        with col2:
+        with col3:
             remind_desc = st.text_area("描述", placeholder="提醒内容描述")
 
         submitted = st.form_submit_button("添加提醒", use_container_width=True)
@@ -338,7 +342,7 @@ elif page == "📧 邮箱配置":
                 type="password"
             )
 
-        with col2:
+        with col3:
             smtp_port = st.number_input(
                 "SMTP端口",
                 value=email_config.get('smtp_port', 587)
@@ -414,7 +418,7 @@ elif page == "📅 课程表":
                 with col1:
                     st.markdown(f"**时间**: {course.get('time', '')}")
                     st.markdown(f"**地点**: {course.get('location', '')}")
-                with col2:
+                with col3:
                     st.markdown(f"**教师**: {course.get('teacher', '')}")
                     st.markdown(f"**备注**: {course.get('note', '')}")
 
@@ -436,7 +440,7 @@ elif page == "📅 课程表":
             course_time = st.text_input("时间", placeholder="例如: 10:00-12:25")
             course_location = st.text_input("地点")
 
-        with col2:
+        with col3:
             course_teacher = st.text_input("教师")
             course_note = st.text_input("备注")
 
@@ -468,7 +472,7 @@ elif page == "⚙️ 高级设置":
     col1, col2 = st.columns(2)
     with col1:
         trans_enabled = st.checkbox("启用翻译", value=trans_config.get('enabled', False))
-    with col2:
+    with col3:
         target_lang = st.selectbox("目标语言", ["en", "zh"], index=0 if trans_config.get('target_lang') == 'en' else 1)
 
     if st.button("保存翻译设置"):
@@ -488,7 +492,7 @@ elif page == "⚙️ 高级设置":
             ["markdown", "html"],
             index=0 if output_settings.get('output_format') == 'markdown' else 1
         )
-    with col2:
+    with col3:
         max_items = st.number_input(
             "每个来源最大条目数",
             min_value=1,
@@ -564,3 +568,4 @@ elif page == "💾 导入导出":
         config_manager.reset_to_default()
         st.success("已重置为默认配置")
         st.rerun()
+
