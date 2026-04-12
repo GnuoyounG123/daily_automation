@@ -12,7 +12,7 @@ echo.
 
 :: Get directories
 set MASTER_DIR=%~dp0
-set FRIEND_DIR=C:\Users\lenovo\AppData\Roaming\CherryStudio\Data\Agents\a6xup6rt2\friend_automation\
+set FRIEND_DIR=%~dp0..\friend_automation\
 
 :: Create log
 echo %date% %time% - Morning automation started >> "%MASTER_DIR%logs\morning_master.log"

@@ -29,3 +29,4 @@ releaseconfig_manager.py
 launcher.py
 build.bat
 build_exe.spec
+.secret_key

@@ -12,8 +12,8 @@ import json
 import random
 from datetime import datetime, timedelta
 from pathlib import Path
-import base64
 import smtplib
+from password_crypto import PasswordCrypto
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
@@ -95,22 +95,8 @@ def load_schedule():
 
 
 def create_default_schedule():
-    """创建默认课表结构"""
     default = {
-        "semester": "2024-2025学年春季学期",
-        "courses": [],
-        "class_time": {
-            "1": {"start": "08:00", "end": "08:45"},
-            "2": {"start": "08:55", "end": "09:40"},
-            "3": {"start": "10:00", "end": "10:45"},
-            "4": {"start": "10:55", "end": "11:40"},
-            "5": {"start": "14:00", "end": "14:45"},
-            "6": {"start": "14:55", "end": "15:40"},
-            "7": {"start": "16:00", "end": "16:45"},
-            "8": {"start": "16:55", "end": "17:40"},
-            "9": {"start": "18:30", "end": "19:15"},
-            "10": {"start": "19:25", "end": "20:10"}
-        },
+        "semester": "",
         "week_schedule": {
             "Monday": [],
             "Tuesday": [],
@@ -119,7 +105,9 @@ def create_default_schedule():
             "Friday": [],
             "Saturday": [],
             "Sunday": []
-        }
+        },
+        "review_tasks": {},
+        "daily_routine": {}
     }
     save_schedule(default)
     return default
@@ -142,13 +130,13 @@ def load_weekly_tasks():
 
 
 def create_empty_tasks():
-    """创建空任务结构"""
     return {
-        "semester_goals": [],
-        "this_week": {
-            "big_tasks": [],
-            "deadlines": [],
-            "daily_breakdown": {}
+        "week_of": datetime.now().strftime("%Y-%m-%d"),
+        "plan_period": "",
+        "big_tasks_summary": [],
+        "daily_tasks": {
+            "Monday": [], "Tuesday": [], "Wednesday": [],
+            "Thursday": [], "Friday": [], "Saturday": [], "Sunday": []
         },
         "last_updated": datetime.now().isoformat()
     }
@@ -524,12 +512,20 @@ def send_daily_email(html_content, config):
             server = smtplib.SMTP(smtp_server, smtp_port)
             server.starttls()
 
-        pwd = config.get('sender_password', '')
-        if pwd.startswith('enc:'):
+        encrypted_pwd = config.get('sender_password', '')
+        if encrypted_pwd and encrypted_pwd.startswith("fernet:"):
             try:
-                pwd = base64.b64decode(pwd[4:]).decode('utf-8')
+                pwd = PasswordCrypto(Path(__file__).parent).decrypt(encrypted_pwd)
             except Exception:
-                pass  # base64解码失败使用原始值
+                pwd = encrypted_pwd
+        elif encrypted_pwd and encrypted_pwd.startswith("enc:"):
+            import base64
+            try:
+                pwd = base64.b64decode(encrypted_pwd[4:]).decode('utf-8')
+            except Exception:
+                pwd = encrypted_pwd
+        else:
+            pwd = encrypted_pwd
         server.login(config.get('sender_email'), pwd)
         server.sendmail(
             config.get('sender_email'),
@@ -560,8 +556,37 @@ def main():
         with open(config_file, 'r', encoding='utf-8') as f:
             config = json.load(f)
     else:
-        log_message("未找到config.json，请确保配置文件存在", "ERROR")
-        return
+        log_message("未找到config.json，正在创建默认配置...")
+        default_config = {
+            "news_sources": [
+                {"name": "arXiv AI", "url": "http://export.arxiv.org/api/query?search_query=cat:cs.AI+OR+cat:cs.LG+OR+cat:cs.CL&sortBy=submittedDate&sortOrder=descending&max_results=10", "type": "rss", "enabled": True},
+                {"name": "Semantic Scholar", "url": "https://www.semanticscholar.org/", "type": "web", "enabled": True},
+                {"name": "AMiner", "url": "https://www.aminer.cn/", "type": "web", "enabled": True},
+                {"name": "The Gradient", "url": "https://thegradient.pub/", "type": "web", "enabled": True}
+            ],
+            "reminders": [
+                {"time": "09:00", "title": "学术早报", "description": "今日最新学术资讯已整理完毕，请查阅。"},
+                {"time": "22:00", "title": "晚间复盘", "description": "今日工作告一段落，回顾一下收获。"}
+            ],
+            "keywords": ["artificial intelligence", "machine learning", "big data"],
+            "keywords_cn": ["人工智能", "大数据"],
+            "output_format": "markdown",
+            "translation": {"enabled": False, "target_lang": "en"},
+            "max_items_per_source": 5,
+            "email": {
+                "enabled": False,
+                "smtp_server": "smtp.qq.com",
+                "smtp_port": 587,
+                "sender_email": "",
+                "sender_password": "",
+                "receiver_email": "",
+                "subject_prefix": "[学术简报]"
+            },
+            "api_keys": {"semantic_scholar": "", "openalex": "", "core": ""}
+        }
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(default_config, f, ensure_ascii=False, indent=2)
+        config = default_config
 
     # 加载课表和任务
     schedule = load_schedule()
