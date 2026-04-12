@@ -1,0 +1,51 @@
+{
+  "news_sources": [
+    {
+      "name": "arXiv AI",
+      "url": "http://export.arxiv.org/api/query?search_query=cat:cs.AI+OR+cat:cs.LG+OR+cat:cs.CL&sortBy=submittedDate&sortOrder=descending&max_results=10",
+      "type": "rss",
+      "enabled": true
+    },
+    {
+      "name": "Semantic Scholar",
+      "url": "https://www.semanticscholar.org/",
+      "type": "web",
+      "enabled": true
+    },
+    {
+      "name": "AMiner",
+      "url": "https://www.aminer.cn/",
+      "type": "web",
+      "enabled": true
+    },
+    {
+      "name": "The Gradient",
+      "url": "https://thegradient.pub/",
+      "type": "web",
+      "enabled": true
+    }
+  ],
+  "reminders": [
+    {"time": "09:00", "title": "学术早报", "description": "今日学术资讯已整理完毕"},
+    {"time": "22:00", "title": "晚间复盘", "description": "回顾今日收获"}
+  ],
+  "keywords": ["artificial intelligence", "machine learning", "big data", "public governance", "digital governance"],
+  "keywords_cn": ["人工智能", "大数据", "公共治理", "数字治理"],
+  "output_format": "markdown",
+  "translation": {"enabled": false, "target_lang": "en"},
+  "max_items_per_source": 5,
+  "email": {
+    "enabled": false,
+    "smtp_server": "smtp.qq.com",
+    "smtp_port": 587,
+    "sender_email": "",
+    "sender_password": "",
+    "receiver_email": "",
+    "subject_prefix": "[学术简报]"
+  },
+  "api_keys": {
+    "semantic_scholar": "",
+    "openalex": "",
+    "core": ""
+  }
+}
