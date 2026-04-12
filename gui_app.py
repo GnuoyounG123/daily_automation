@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext, filedialog
 import json
 import threading
+import base64
 import subprocess
 import sys
 import webbrowser
@@ -29,6 +30,21 @@ def _get_app_dir() -> Path:
 
 class DailyAutomationApp:
     """主应用程序"""
+
+    @staticmethod
+    def _decode_pwd(value: str) -> str:
+        if value and value.startswith("enc:"):
+            try:
+                return base64.b64decode(value[4:]).decode('utf-8')
+            except Exception:
+                return value
+        return value
+
+    @staticmethod
+    def _encode_pwd(value: str) -> str:
+        if value and not value.startswith("enc:"):
+            return "enc:" + base64.b64encode(value.encode('utf-8')).decode('utf-8')
+        return value
 
     def __init__(self, root):
         self.root = root
@@ -58,6 +74,7 @@ class DailyAutomationApp:
         self.create_keywords_tab()
         self.create_reminders_tab()
         self.create_email_tab()
+        self.create_api_keys_tab()
         self.create_schedule_tab()
         self.create_about_tab()
 
@@ -149,10 +166,10 @@ class DailyAutomationApp:
                 try:
                     with open(log_file, 'r', encoding='utf-8') as f:
                         lines = f.readlines()[-20:]  # 最后20行
-                        self.log_text.insert(tk.END, f"=== {log_file.name} ===\n")
+                        self.log_text.insert(tk.END, f"=== {log_file.name} ===" + "\n")
                         self.log_text.insert(tk.END, ''.join(lines) + "\n\n")
-                except:
-                    pass
+                except Exception:
+                    pass  # 日志文件读取失败可忽略
         else:
             self.log_text.insert(tk.END, "暂无运行记录")
 
@@ -460,7 +477,7 @@ Outlook: smtp-mail.outlook.com 端口587
         self.email_entries['SMTP服务器'].insert(0, email.get('smtp_server', 'smtp.qq.com'))
         self.email_entries['SMTP端口'].insert(0, str(email.get('smtp_port', 587)))
         self.email_entries['发件人邮箱'].insert(0, email.get('sender_email', ''))
-        self.email_entries['授权密码'].insert(0, email.get('sender_password', ''))
+        self.email_entries['授权密码'].insert(0, self._decode_pwd(email.get('sender_password', '')))
         self.email_entries['收件人邮箱'].insert(0, email.get('receiver_email', ''))
         self.email_entries['邮件主题前缀'].insert(0, email.get('subject_prefix', '[学术简报]'))
 
@@ -471,7 +488,7 @@ Outlook: smtp-mail.outlook.com 端口587
             'smtp_server': self.email_entries['SMTP服务器'].get(),
             'smtp_port': int(self.email_entries['SMTP端口'].get() or 587),
             'sender_email': self.email_entries['发件人邮箱'].get(),
-            'sender_password': self.email_entries['授权密码'].get(),
+            'sender_password': self._encode_pwd(self.email_entries['授权密码'].get()),
             'receiver_email': self.email_entries['收件人邮箱'].get(),
             'subject_prefix': self.email_entries['邮件主题前缀'].get()
         }
@@ -479,6 +496,122 @@ Outlook: smtp-mail.outlook.com 端口587
         if self.config_manager.update_email_config(config):
             messagebox.showinfo("成功", "邮箱配置已保存")
             self.refresh_home_status()
+
+    # ========== API密钥配置 ==========
+    def create_api_keys_tab(self):
+        """API密钥配置"""
+        frame = ttk.Frame(self.notebook)
+        self.notebook.add(frame, text="🔑 API密钥")
+
+        ttk.Label(frame, text="学术API密钥配置",
+                  font=('Microsoft YaHei', 14, 'bold')).pack(pady=10)
+        ttk.Label(frame, text="配置API密钥可提升访问速率和配额，部分API必须配置密钥才能使用",
+                  foreground='gray').pack(pady=5)
+
+        # 配置表单
+        form_frame = ttk.Frame(frame)
+        form_frame.pack(fill='x', padx=20, pady=10)
+
+        self.api_key_entries = {}
+        api_key_config = [
+            ('semantic_scholar', 'Semantic Scholar:', '可选 - 无Key限流100次/5分钟'),
+            ('openalex', 'OpenAlex:', '可选 - 有Key可提升速率'),
+            ('core', 'CORE:', '必须 - 无Key无法使用'),
+        ]
+
+        for i, (key_name, label, hint) in enumerate(api_key_config):
+            row = ttk.Frame(form_frame)
+            row.pack(fill='x', pady=8)
+
+            ttk.Label(row, text=label, width=18).pack(side='left')
+
+            entry = ttk.Entry(row, width=50, show='*')
+            entry.pack(side='left', padx=5)
+            self.api_key_entries[key_name] = entry
+
+            ttk.Label(row, text=hint, foreground='gray').pack(side='left', padx=5)
+
+        # 显示/隐藏密钥切换
+        self.show_api_keys = tk.BooleanVar(value=False)
+        ttk.Checkbutton(frame, text="显示密钥", variable=self.show_api_keys,
+                        command=self._toggle_api_key_visibility).pack(pady=5)
+
+        ttk.Button(frame, text="💾 保存API密钥配置",
+                   command=self.save_api_keys_config).pack(pady=10)
+
+        # 获取API Key链接
+        help_frame = ttk.LabelFrame(frame, text="🔗 获取API密钥")
+        help_frame.pack(fill='x', padx=20, pady=10)
+
+        links = [
+            ("Semantic Scholar API Key", "https://www.semanticscholar.org/product/api#api-key"),
+            ("OpenAlex API Key", "https://docs.openalex.org/how-to-use-the-api/get-an-api-key"),
+            ("CORE API Key", "https://core.ac.uk/services/api"),
+        ]
+
+        for name, url in links:
+            link_frame = ttk.Frame(help_frame)
+            link_frame.pack(fill='x', padx=10, pady=3)
+            ttk.Label(link_frame, text=f"• {name}:").pack(side='left')
+            link_label = ttk.Label(link_frame, text=url, foreground='blue', cursor='hand2')
+            link_label.pack(side='left', padx=5)
+            link_label.bind('<Button-1>', lambda e, u=url: webbrowser.open(u))
+
+        # 缺失密钥提醒
+        self.api_key_status = ttk.Label(frame, text="", foreground='orange')
+        self.api_key_status.pack(pady=5)
+
+    def _toggle_api_key_visibility(self):
+        show = self.show_api_keys.get()
+        for entry in self.api_key_entries.values():
+            entry.config(show='' if show else '*')
+
+    def load_api_keys_config(self):
+        """加载API密钥配置"""
+        if not hasattr(self, 'api_key_entries'):
+            return
+        keys = self.config_manager.get_api_keys()
+        for key_name, entry in self.api_key_entries.items():
+            entry.delete(0, tk.END)
+            value = keys.get(key_name, '')
+            if value and value.startswith('enc:'):
+                value = self._decode_pwd(value)
+            entry.insert(0, value)
+
+        self._check_api_key_status()
+
+    def save_api_keys_config(self):
+        """保存API密钥配置"""
+        api_keys = {}
+        for key_name, entry in self.api_key_entries.items():
+            value = entry.get().strip()
+            if value and not value.startswith('enc:'):
+                value = self._encode_pwd(value)
+            api_keys[key_name] = value
+
+        if self.config_manager.update_api_keys(api_keys):
+            messagebox.showinfo("成功", "API密钥配置已保存")
+            self._check_api_key_status()
+            self.refresh_home_status()
+
+    def _check_api_key_status(self):
+        """检查API密钥状态并提醒"""
+        if not hasattr(self, 'api_key_entries'):
+            return
+        missing = self.config_manager.check_missing_api_keys()
+        if missing:
+            required_missing = [m for m in missing if m['required']]
+            optional_missing = [m for m in missing if not m['required']]
+            msg_parts = []
+            if required_missing:
+                names = ', '.join(m['name'] for m in required_missing)
+                msg_parts.append(f"⚠️ 必须配置: {names}")
+            if optional_missing:
+                names = ', '.join(m['name'] for m in optional_missing)
+                msg_parts.append(f"💡 建议配置: {names}")
+            self.api_key_status.config(text=' | '.join(msg_parts))
+        else:
+            self.api_key_status.config(text="✅ 所有API密钥已配置", foreground='green')
 
     # ========== 课程表 ==========
     def create_schedule_tab(self):
@@ -618,52 +751,55 @@ Outlook: smtp-mail.outlook.com 端口587
         self.load_keywords()
         self.load_reminders()
         self.load_email_config()
+        self.load_api_keys_config()
         self.load_schedule()
         self.refresh_home_status()
 
-    def run_once(self):
-        """运行一次任务 - 使用子进程方式"""
-        self.status_var.set("正在运行...")
+    def _run_subprocess_task(self, task_mode: str, status_msg: str, success_msg: str):
+        """通用子进程任务执行器
+
+        Args:
+            task_mode: 任务模式 (all/crawl/remind)
+            status_msg: 运行中状态提示
+            success_msg: 成功状态提示
+        """
+        self.status_var.set(status_msg)
         self.root.update()
 
         def run_task():
             try:
-                # 确保日志目录存在
                 log_dir = self.app_dir / "logs"
                 log_dir.mkdir(exist_ok=True)
 
                 debug_log = log_dir / "gui_debug.log"
                 def log(msg):
                     with open(debug_log, 'a', encoding='utf-8') as f:
-                        f.write(f"[{datetime.now().isoformat()}] {msg}\n")
+                        f.write(f"[{datetime.now().isoformat()}] {msg}" + "\n")
 
                 log("=== 任务开始 ===")
                 log(f"app_dir: {self.app_dir}")
 
-                # 使用子进程运行任务，完全隔离
                 if getattr(sys, 'frozen', False):
-                    # 打包环境：运行自身，传递 --task 参数
                     exe_path = sys.executable
-                    log(f"打包模式，运行: {exe_path} --task")
+                    log(f"打包模式，运行: {exe_path} --task {task_mode}")
 
-                    # 使用 CREATE_NO_WINDOW 标志避免弹出控制台窗口
                     startupinfo = subprocess.STARTUPINFO()
                     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                     startupinfo.wShowWindow = subprocess.SW_HIDE
 
+                    cmd = [exe_path, "--task", task_mode] if task_mode != "all" else [exe_path, "--task"]
                     result = subprocess.run(
-                        [exe_path, "--task"],
+                        cmd,
                         capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(self.app_dir),
                         timeout=600,
                         startupinfo=startupinfo,
                         creationflags=subprocess.CREATE_NO_WINDOW
                     )
                 else:
-                    # 开发环境：运行 daily_assistant.py
                     script_path = self.app_dir / "daily_assistant.py"
-                    log(f"开发模式，运行: {script_path}")
+                    log(f"开发模式，运行: {script_path} {task_mode}")
                     result = subprocess.run(
-                        [sys.executable, str(script_path), "all"],
+                        [sys.executable, str(script_path), task_mode],
                         capture_output=True, text=True, encoding="utf-8", errors="replace",
                         cwd=str(self.app_dir),
                         timeout=600
@@ -677,14 +813,14 @@ Outlook: smtp-mail.outlook.com 端口587
 
                 if result.returncode == 0:
                     log("任务执行成功")
-                    self.root.after(0, lambda: self.status_var.set("运行完成"))
+                    self.root.after(0, lambda: self.status_var.set(success_msg))
                     self.root.after(0, self.refresh_home_status)
                 else:
                     log(f"任务执行失败: {result.returncode}")
-                    self.root.after(0, lambda: messagebox.showerror("运行错误", f"任务执行失败\n{result.stderr}"))
+                    self.root.after(0, lambda: messagebox.showerror("运行错误", "任务执行失败" + "\n" + f"{result.stderr}"))
                     self.root.after(0, lambda: self.status_var.set("运行失败"))
 
-                log("=== 任务结束 ===\n")
+                log("=== 任务结束 ===")
 
             except subprocess.TimeoutExpired:
                 log("任务超时")
@@ -693,167 +829,24 @@ Outlook: smtp-mail.outlook.com 端口587
             except Exception as e:
                 import traceback
                 log(f"异常: {traceback.format_exc()}")
-                self.root.after(0, lambda: messagebox.showerror("错误", f"执行失败:\n{str(e)}"))
+                self.root.after(0, lambda: messagebox.showerror("错误", "执行失败:" + "\n" + f"{str(e)}"))
                 self.root.after(0, lambda: self.status_var.set("运行失败"))
 
         thread = threading.Thread(target=run_task, daemon=True)
         thread.start()
+
+    def run_once(self):
+        """运行一次任务"""
+        self._run_subprocess_task("all", "正在运行...", "运行完成")
 
     def run_crawl(self):
         """运行学术简报生成"""
-        self.status_var.set("正在生成学术简报...")
-        self.root.update()
-
-        def run_task():
-            try:
-                # 确保日志目录存在
-                log_dir = self.app_dir / "logs"
-                log_dir.mkdir(exist_ok=True)
-
-                debug_log = log_dir / "gui_debug.log"
-                def log(msg):
-                    with open(debug_log, 'a', encoding='utf-8') as f:
-                        f.write(f"[{datetime.now().isoformat()}] {msg}\n")
-
-                log("=== 任务开始 ===")
-                log(f"app_dir: {self.app_dir}")
-
-                # 使用子进程运行任务，完全隔离
-                if getattr(sys, 'frozen', False):
-                    # 打包环境：运行自身，传递 --task 参数
-                    exe_path = sys.executable
-                    log(f"打包模式，运行: {exe_path} --task crawl")
-
-                    # 使用 CREATE_NO_WINDOW 标志避免弹出控制台窗口
-                    startupinfo = subprocess.STARTUPINFO()
-                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                    startupinfo.wShowWindow = subprocess.SW_HIDE
-
-                    result = subprocess.run(
-                        [exe_path, "--task", "crawl"],
-                        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(self.app_dir),
-                        timeout=600,
-                        startupinfo=startupinfo,
-                        creationflags=subprocess.CREATE_NO_WINDOW
-                    )
-                else:
-                    # 开发环境：运行 daily_assistant.py
-                    script_path = self.app_dir / "daily_assistant.py"
-                    log(f"开发模式，运行: {script_path} crawl")
-                    result = subprocess.run(
-                        [sys.executable, str(script_path), "crawl"],
-                        capture_output=True, text=True, encoding="utf-8", errors="replace",
-                        cwd=str(self.app_dir),
-                        timeout=600
-                    )
-
-                log(f"返回码: {result.returncode}")
-                if result.stdout:
-                    log(f"输出: {result.stdout[:500]}")
-                if result.stderr:
-                    log(f"错误: {result.stderr[:500]}")
-
-                if result.returncode == 0:
-                    log("任务执行成功")
-                    self.root.after(0, lambda: self.status_var.set("学术简报生成完成"))
-                    self.root.after(0, self.refresh_home_status)
-                else:
-                    log(f"任务执行失败: {result.returncode}")
-                    self.root.after(0, lambda: messagebox.showerror("运行错误", f"任务执行失败\n{result.stderr}"))
-                    self.root.after(0, lambda: self.status_var.set("运行失败"))
-
-                log("=== 任务结束 ===\n")
-
-            except subprocess.TimeoutExpired:
-                log("任务超时")
-                self.root.after(0, lambda: messagebox.showerror("错误", "任务执行超时"))
-                self.root.after(0, lambda: self.status_var.set("运行失败"))
-            except Exception as e:
-                import traceback
-                log(f"异常: {traceback.format_exc()}")
-                self.root.after(0, lambda: messagebox.showerror("错误", f"执行失败:\n{str(e)}"))
-                self.root.after(0, lambda: self.status_var.set("运行失败"))
-
-        thread = threading.Thread(target=run_task, daemon=True)
-        thread.start()
+        self._run_subprocess_task("crawl", "正在生成学术简报...", "学术简报生成完成")
 
     def run_remind(self):
         """运行每日日程提醒"""
-        self.status_var.set("正在检查日程提醒...")
-        self.root.update()
+        self._run_subprocess_task("remind", "正在检查日程提醒...", "日程提醒检查完成")
 
-        def run_task():
-            try:
-                # 确保日志目录存在
-                log_dir = self.app_dir / "logs"
-                log_dir.mkdir(exist_ok=True)
-
-                debug_log = log_dir / "gui_debug.log"
-                def log(msg):
-                    with open(debug_log, 'a', encoding='utf-8') as f:
-                        f.write(f"[{datetime.now().isoformat()}] {msg}\n")
-
-                log("=== 任务开始 ===")
-                log(f"app_dir: {self.app_dir}")
-
-                # 使用子进程运行任务，完全隔离
-                if getattr(sys, 'frozen', False):
-                    # 打包环境：运行自身，传递 --task 参数
-                    exe_path = sys.executable
-                    log(f"打包模式，运行: {exe_path} --task remind")
-
-                    # 使用 CREATE_NO_WINDOW 标志避免弹出控制台窗口
-                    startupinfo = subprocess.STARTUPINFO()
-                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                    startupinfo.wShowWindow = subprocess.SW_HIDE
-
-                    result = subprocess.run(
-                        [exe_path, "--task", "remind"],
-                        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(self.app_dir),
-                        timeout=600,
-                        startupinfo=startupinfo,
-                        creationflags=subprocess.CREATE_NO_WINDOW
-                    )
-                else:
-                    # 开发环境：运行 daily_assistant.py
-                    script_path = self.app_dir / "daily_assistant.py"
-                    log(f"开发模式，运行: {script_path} remind")
-                    result = subprocess.run(
-                        [sys.executable, str(script_path), "remind"],
-                        capture_output=True, text=True, encoding="utf-8", errors="replace",
-                        cwd=str(self.app_dir),
-                        timeout=600
-                    )
-
-                log(f"返回码: {result.returncode}")
-                if result.stdout:
-                    log(f"输出: {result.stdout[:500]}")
-                if result.stderr:
-                    log(f"错误: {result.stderr[:500]}")
-
-                if result.returncode == 0:
-                    log("任务执行成功")
-                    self.root.after(0, lambda: self.status_var.set("日程提醒检查完成"))
-                    self.root.after(0, self.refresh_home_status)
-                else:
-                    log(f"任务执行失败: {result.returncode}")
-                    self.root.after(0, lambda: messagebox.showerror("运行错误", f"任务执行失败\n{result.stderr}"))
-                    self.root.after(0, lambda: self.status_var.set("运行失败"))
-
-                log("=== 任务结束 ===\n")
-
-            except subprocess.TimeoutExpired:
-                log("任务超时")
-                self.root.after(0, lambda: messagebox.showerror("错误", "任务执行超时"))
-                self.root.after(0, lambda: self.status_var.set("运行失败"))
-            except Exception as e:
-                import traceback
-                log(f"异常: {traceback.format_exc()}")
-                self.root.after(0, lambda: messagebox.showerror("错误", f"执行失败:\n{str(e)}"))
-                self.root.after(0, lambda: self.status_var.set("运行失败"))
-
-        thread = threading.Thread(target=run_task, daemon=True)
-        thread.start()
 
     def open_data_dir(self):
         """打开数据目录"""
@@ -1063,9 +1056,9 @@ def run_task_mode():
     log_dir = app_dir / "logs"
     log_dir.mkdir(exist_ok=True)
     with open(log_dir / "task_mode.log", 'a', encoding='utf-8') as f:
-        f.write(f"[{datetime.now().isoformat()}] 任务模式启动\n")
-        f.write(f"app_dir: {app_dir}\n")
-        f.write(f"sys.argv: {sys.argv}\n")
+        f.write(f"[{datetime.now().isoformat()}] 任务模式启动" + "\n")
+        f.write(f"app_dir: {app_dir}" + "\n")
+        f.write(f"sys.argv: {sys.argv}" + "\n")
 
     # 导入并运行任务
     sys.path.insert(0, str(app_dir))
@@ -1087,10 +1080,10 @@ if __name__ == "__main__":
     log_dir = app_dir / "logs"
     log_dir.mkdir(exist_ok=True)
     with open(log_dir / "startup.log", 'a', encoding='utf-8') as f:
-        f.write(f"[{datetime.now().isoformat()}] 程序启动\n")
-        f.write(f"sys.argv: {sys.argv}\n")
-        f.write(f"frozen: {getattr(sys, 'frozen', False)}\n")
-        f.write(f"app_dir: {app_dir}\n")
+        f.write(f"[{datetime.now().isoformat()}] 程序启动" + "\n")
+        f.write(f"sys.argv: {sys.argv}" + "\n")
+        f.write(f"frozen: {getattr(sys, 'frozen', False)}" + "\n")
+        f.write(f"app_dir: {app_dir}" + "\n")
 
     # 检查命令行参数
     if len(sys.argv) > 1 and sys.argv[1] == "--task":

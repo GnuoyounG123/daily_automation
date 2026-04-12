@@ -68,7 +68,7 @@ class ConfigManager:
             data = self.load_json(file_path)
             self.save_json(backup_file, data)
             return backup_file
-        except:
+        except Exception:
             return None
 
     # ========== 主配置 (config.json) ==========
@@ -227,6 +227,65 @@ class ConfigManager:
         config['email'] = email_config
         return self.save_config(config)
 
+
+    # ========== API密钥配置 ==========
+
+    API_KEY_INFO = {
+        'semantic_scholar': {
+            'name': 'Semantic Scholar',
+            'required': False,
+            'description': '无Key限流100次/5分钟，有Key可提升配额',
+            'get_url': 'https://www.semanticscholar.org/product/api#api-key'
+        },
+        'openalex': {
+            'name': 'OpenAlex',
+            'required': False,
+            'description': '无Key限速，有Key可提升速率',
+            'get_url': 'https://docs.openalex.org/how-to-use-the-api/get-an-api-key'
+        },
+        'core': {
+            'name': 'CORE',
+            'required': True,
+            'description': '必须配置API Key才能使用',
+            'get_url': 'https://core.ac.uk/services/api'
+        }
+    }
+
+    def get_api_keys(self) -> Dict:
+        """获取API密钥配置"""
+        config = self.get_config()
+        return config.get('api_keys', {
+            'semantic_scholar': '',
+            'openalex': '',
+            'core': ''
+        })
+
+    def get_api_key(self, service: str) -> str:
+        """获取指定服务的API密钥"""
+        keys = self.get_api_keys()
+        return keys.get(service, '')
+
+    def update_api_keys(self, api_keys: Dict) -> bool:
+        """更新API密钥配置"""
+        config = self.get_config()
+        config['api_keys'] = api_keys
+        return self.save_config(config)
+
+    def check_missing_api_keys(self) -> List[Dict]:
+        """检查缺失的API密钥，返回需要配置的列表"""
+        keys = self.get_api_keys()
+        missing = []
+        for key_name, info in self.API_KEY_INFO.items():
+            if not keys.get(key_name, ''):
+                missing.append({
+                    'key_name': key_name,
+                    'name': info['name'],
+                    'required': info['required'],
+                    'description': info['description'],
+                    'get_url': info['get_url']
+                })
+        return missing
+
     # ========== 翻译配置 ==========
 
     def get_translation_config(self) -> Dict:
@@ -369,6 +428,11 @@ class ConfigManager:
                 "sender_password": "",
                 "receiver_email": "",
                 "subject_prefix": "[学术简报]"
+            },
+            "api_keys": {
+                "semantic_scholar": "",
+                "openalex": "",
+                "core": ""
             }
         }
         self.save_config(default_config)

@@ -12,6 +12,7 @@ import json
 import random
 from datetime import datetime, timedelta
 from pathlib import Path
+import base64
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -33,7 +34,7 @@ def log_message(message, level="INFO"):
     """记录日志"""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_file = LOG_DIR / f"{datetime.now().strftime('%Y%m%d')}.log"
-    log_entry = f"[{timestamp}] [{level}] {message}\n"
+    log_entry = f"[{timestamp}] [{level}] {message}" + "\n"
     print(log_entry.strip())
     with open(log_file, 'a', encoding='utf-8') as f:
         f.write(log_entry)
@@ -523,7 +524,13 @@ def send_daily_email(html_content, config):
             server = smtplib.SMTP(smtp_server, smtp_port)
             server.starttls()
 
-        server.login(config.get('sender_email'), config.get('sender_password'))
+        pwd = config.get('sender_password', '')
+        if pwd.startswith('enc:'):
+            try:
+                pwd = base64.b64decode(pwd[4:]).decode('utf-8')
+            except Exception:
+                pass  # base64解码失败使用原始值
+        server.login(config.get('sender_email'), pwd)
         server.sendmail(
             config.get('sender_email'),
             config.get('receiver_email'),

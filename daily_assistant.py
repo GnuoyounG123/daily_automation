@@ -17,6 +17,7 @@ from pathlib import Path
 from urllib.parse import urlparse, quote
 import urllib.request
 import urllib.error
+import base64
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -29,8 +30,8 @@ if sys.platform == 'win32':
         kernel32 = ctypes.windll.kernel32
         kernel32.SetConsoleOutputCP(65001)  # UTF-8
         kernel32.SetConsoleCP(65001)
-    except:
-        pass
+    except Exception:
+        pass  # Windows控制台编码设置失败可忽略
     # 同时设置Python的stdout编码
     if sys.stdout:
         sys.stdout.reconfigure(encoding='utf-8', errors='replace')
@@ -99,7 +100,7 @@ def log_message(message, level="INFO"):
     """记录日志"""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_file = LOG_DIR / f"{datetime.now().strftime('%Y%m%d')}.log"
-    log_entry = f"[{timestamp}] [{level}] {message}\n"
+    log_entry = f"[{timestamp}] [{level}] {message}" + "\n"
     # 写入日志文件（UTF-8编码，支持emoji）
     with open(log_file, 'a', encoding='utf-8') as f:
         f.write(log_entry)
@@ -262,387 +263,261 @@ class Translator:
 
 # ============ 信息爬取模块 ============
 
+from web_fetcher import WebFetcher, FetchResult
+from html_parser import HtmlParser
+from api_sources import ApiSourceManager
+
+
 class InfoCrawler:
-    """学术信息爬取器"""
+    """学术信息爬取器 - 多架构自动降级版
+
+    爬取策略降级链:
+    1. API优先 - 使用公开API获取数据（最稳定）
+    2. 静态爬取 - 多后端HTTP获取 + 多策略HTML解析
+    3. JS渲染 - Selenium无头浏览器渲染后解析
+    4. 标记失败 - 记录无法爬取的来源，提示用户手动输入
+    """
+
+    JS_REQUIRED_DOMAINS = [
+        'semanticscholar.org', 'aminer.cn', 'scholar.google.com',
+        'connectedpapers.com', 'researchgate.net',
+    ]
+
+    API_DOMAIN_MAP = {
+        'semanticscholar.org': 'Semantic Scholar API',
+    }
 
     def __init__(self):
-        self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.0',
-            'Accept': 'application/json, application/xml, text/xml, */*',
-            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8'
-        }
-        self.results = []
+        self.fetcher = WebFetcher()
+        self.parser = HtmlParser()
+        self.api_manager = ApiSourceManager()
+        self.failed_sources = []
+        self._crawl_logs = []
 
-    def fetch_content(self, url, timeout=15):
-        """获取内容"""
+        for log_msg in self.fetcher.get_logs():
+            log_message(log_msg, "INFO")
+        for log_msg in self.parser.get_logs():
+            log_message(log_msg, "INFO")
+        for log_msg in self.api_manager.get_logs():
+            log_message(log_msg, "INFO")
+
+    def _log(self, msg, level="INFO"):
+        self._crawl_logs.append(f"[{level}] {msg}")
+        log_message(msg, level)
+
+    def get_failed_sources(self):
+        return self.failed_sources
+
+    def _needs_js(self, url):
+        domain = urlparse(url).netloc.lower()
+        return any(d in domain for d in self.JS_REQUIRED_DOMAINS)
+
+    def _has_api(self, url):
+        domain = urlparse(url).netloc.lower()
+        for api_domain, api_name in self.API_DOMAIN_MAP.items():
+            if api_domain in domain:
+                return api_name
+        return None
+
+    def _try_api_fallback(self, source, keywords):
+        api_name = self._has_api(source['url'])
+        if not api_name:
+            return []
+
+        self._log(f"[策略1-API] 尝试 {api_name} 获取 {source['name']}")
         try:
-            req = urllib.request.Request(url, headers=self.headers)
-            with urllib.request.urlopen(req, timeout=timeout) as response:
-                content_type = response.headers.get('Content-Type', '')
-                data = response.read()
-
-                # 尝试解码
-                try:
-                    return data.decode('utf-8')
-                except:
-                    try:
-                        return data.decode('gbk')
-                    except:
-                        return data.decode('latin-1')
-        except urllib.error.HTTPError as e:
-            log_message(f"HTTP错误 {e.code}: {url}", "ERROR")
-            return None
+            items = self.api_manager.search_single(api_name, keywords, max_results=10)
+            if items:
+                self._log(f"[策略1-API] {api_name} 成功获取 {len(items)} 条")
+                return items
         except Exception as e:
-            log_message(f"获取失败 {url}: {str(e)}", "ERROR")
-            return None
+            self._log(f"[策略1-API] {api_name} 失败: {e}", "WARNING")
 
-    def parse_arxiv_rss(self, xml_content):
-        """解析arXiv RSS"""
+        return []
+
+    def _try_static_crawl(self, source):
+        self._log(f"[策略2-静态] 尝试多后端获取 {source['name']}")
+        result = self.fetcher.fetch(source['url'], timeout=15)
+
+        if not result.content or result.error:
+            self._log(f"[策略2-静态] 所有HTTP后端获取失败: {result.error}", "WARNING")
+            return []
+
+        self._log(f"[策略2-静态] {result.backend_used} 获取成功，尝试多策略解析")
+        content = result.content
+        source_type = source.get('type', 'web')
         items = []
-        try:
-            root = ET.fromstring(xml_content)
-            # 处理命名空间
-            ns = {'atom': 'http://www.w3.org/2005/Atom'}
 
-            for entry in root.findall('.//atom:entry', ns):
-                title = entry.find('atom:title', ns)
-                summary = entry.find('atom:summary', ns)
-                link = entry.find('atom:link', ns)
-                published = entry.find('atom:published', ns)
+        if source_type == 'rss':
+            is_arxiv = 'arxiv' in source['url'].lower()
+            items = self.parser.parse_rss(content, source['name'], is_arxiv=is_arxiv)
+        elif source_type == 'json':
+            items = self.parser.parse_json(content, source['name'])
+        elif source_type == 'web':
+            items = self.parser.parse(content, source['url'], source['name'])
 
-                if title is not None:
-                    items.append({
-                        'title': title.text.strip() if title.text else '无标题',
-                        'abstract': summary.text.strip() if summary is not None and summary.text else '',
-                        'url': link.get('href') if link is not None else '',
-                        'date': published.text[:10] if published is not None else datetime.now().strftime('%Y-%m-%d'),
-                        'source': 'arXiv'
-                    })
-        except Exception as e:
-            log_message(f"解析arXiv RSS失败: {str(e)}", "ERROR")
+        if items:
+            self._log(f"[策略2-静态] 解析成功: {len(items)} 条")
+        else:
+            self._log(f"[策略2-静态] 所有解析策略均未获得有效结果", "WARNING")
+
         return items
 
-    def parse_generic_rss(self, xml_content, source_name):
-        """解析通用RSS"""
-        items = []
+    def _try_js_crawl(self, source):
+        self._log(f"[策略3-JS渲染] 尝试Selenium获取 {source['name']}")
         try:
-            root = ET.fromstring(xml_content)
+            result = self.fetcher.fetch_with_js(source['url'], timeout=30, wait_seconds=5)
+            if not result.content or result.error:
+                self._log(f"[策略3-JS渲染] Selenium获取失败: {result.error}", "WARNING")
+                return []
 
-            # 查找item元素（可能在channel下，也可能直接在root下）
-            channel = root.find('.//channel')
-            if channel is not None:
-                item_list = channel.findall('item')
+            self._log(f"[策略3-JS渲染] 获取成功，尝试解析")
+            items = self.parser.parse(result.content, source['url'], source['name'])
+            if items:
+                self._log(f"[策略3-JS渲染] 解析成功: {len(items)} 条")
             else:
-                item_list = root.findall('.//item')
-
-            for item in item_list[:10]:  # 最多取10条
-                title = item.find('title')
-                desc = item.find('description')
-                link = item.find('link')
-                pub_date = item.find('pubDate')
-
-                if title is not None and title.text:
-                    items.append({
-                        'title': title.text.strip(),
-                        'abstract': desc.text.strip() if desc is not None and desc.text else '',
-                        'url': link.text.strip() if link is not None and link.text else '',
-                        'date': '今日',
-                        'source': source_name
-                    })
+                self._log(f"[策略3-JS渲染] 解析未获得有效结果", "WARNING")
+            return items
         except Exception as e:
-            log_message(f"解析RSS失败 {source_name}: {str(e)}", "ERROR")
-        return items
+            self._log(f"[策略3-JS渲染] 异常: {e}", "ERROR")
+            return []
 
-    def parse_paperswithcode(self, json_content):
-        """解析PapersWithCode API"""
-        items = []
-        try:
-            data = json.loads(json_content)
-            results = data.get('results', [])
+    def _mark_failed(self, source, reason=""):
+        api_key_url = self._get_api_key_url(source)
+        failed_info = {
+            'name': source['name'],
+            'url': source['url'],
+            'type': source.get('type', 'web'),
+            'reason': reason,
+            'suggestion': self._get_manual_suggestion(source)
+        }
+        if api_key_url:
+            failed_info['api_key_url'] = api_key_url
+        self.failed_sources.append(failed_info)
+        self._log(f"[失败] {source['name']} 所有策略均失败: {reason}", "ERROR")
 
-            for paper in results[:10]:
-                items.append({
-                    'title': paper.get('title', '无标题'),
-                    'abstract': paper.get('abstract', ''),
-                    'url': paper.get('url', ''),
-                    'date': paper.get('published', datetime.now().strftime('%Y-%m-%d')),
-                    'source': 'PapersWithCode',
-                    'github': paper.get('github_url', '')
-                })
-        except Exception as e:
-            log_message(f"解析PapersWithCode失败: {str(e)}", "ERROR")
-        return items
+    def _get_api_key_url(self, source):
+        domain = urlparse(source['url']).netloc.lower()
+        domain_key_map = {
+            'semanticscholar.org': 'semantic_scholar',
+            'openalex.org': 'openalex',
+            'core.ac.uk': 'core',
+        }
+        for d, key_name in domain_key_map.items():
+            if d in domain:
+                return self.API_KEY_URLS.get(key_name, '')
+        return ''
 
-    def crawl_source(self, source):
-        """爬取单个来源"""
+    API_KEY_URLS = {
+        'semantic_scholar': 'https://www.semanticscholar.org/product/api#api-key',
+        'openalex': 'https://docs.openalex.org/how-to-use-the-api/get-an-api-key',
+        'core': 'https://core.ac.uk/services/api',
+    }
+
+    def _get_manual_suggestion(self, source):
+        domain = urlparse(source['url']).netloc.lower()
+        suggestions = {
+            'semanticscholar.org': 'Semantic Scholar有公开API，建议配置API Key以提升配额\n申请链接: https://www.semanticscholar.org/product/api#api-key',
+            'aminer.cn': 'AMiner需要JS渲染，建议将源类型改为"api"或手动输入感兴趣的论文信息',
+            'thegradient.pub': '建议检查RSS源是否可用，或将源类型改为"rss"',
+            'scholar.google.com': 'Google Scholar有反爬机制，建议使用Semantic Scholar API替代\n申请链接: https://www.semanticscholar.org/product/api#api-key',
+        }
+        for d, s in suggestions.items():
+            if d in domain:
+                return s
+        return '建议检查URL是否正确，或手动输入该源的学术信息'
+
+    def crawl_source(self, source, keywords=None):
+        """爬取单个来源 - 多策略自动降级"""
         source_name = source['name']
         source_url = source['url']
         source_type = source.get('type', 'web')
 
-        log_message(f"正在爬取: {source_name}")
+        self._log(f"开始爬取: {source_name} ({source_url})")
 
-        content = self.fetch_content(source_url)
-        if not content:
-            return []
+        if keywords is None:
+            keywords = []
 
         items = []
+
+        if source_type == 'api':
+            self._log(f"[策略1-API] 使用API模式获取 {source_name}")
+            api_name = self._has_api(source_url)
+            if api_name:
+                items = self.api_manager.search_single(api_name, keywords, max_results=10)
+            else:
+                items = self.api_manager.search_all(keywords, max_per_source=5)
+            if items:
+                self._log(f"{source_name} API获取 {len(items)} 条")
+                return items
+            self._log(f"[策略1-API] API未返回结果，尝试其他策略", "WARNING")
+
         if source_type == 'rss':
-            if 'arxiv' in source_url.lower():
-                items = self.parse_arxiv_rss(content)
-            else:
-                items = self.parse_generic_rss(content, source_name)
-        elif source_type == 'json':
-            # 通用JSON处理
-            try:
-                data = json.loads(content)
-                if isinstance(data, list):
-                    for item in data[:10]:
-                        items.append({
-                            'title': item.get('title', '无标题'),
-                            'abstract': item.get('abstract', item.get('summary', '')),
-                            'url': item.get('url', item.get('link', '')),
-                            'date': item.get('date', '今日'),
-                            'source': source_name
-                        })
-            except Exception as e:
-                log_message(f"解析JSON失败 {source_name}: {str(e)}", "ERROR")
-        elif source_type == 'web':
-            # 根据域名选择解析方法
-            if 'semanticscholar.org' in source_url.lower():
-                items = self.parse_semantic_scholar(content, source_name)
-            elif 'aminer.cn' in source_url.lower():
-                items = self.parse_aminer(content, source_name)
-            elif 'thegradient.pub' in source_url.lower():
-                items = self.parse_the_gradient(content, source_name)
-            else:
-                # 通用网页解析
-                items = self.parse_generic_web(content, source_name, source_url)
-
-        log_message(f"{source_name} 获取 {len(items)} 条")
-        return items
-
-    def parse_semantic_scholar(self, html, source_name):
-        """解析Semantic Scholar网页"""
-        items = []
-        try:
-            # 尝试多种可能的标题链接模式
-            patterns = [
-                # 文章卡片模式
-                r'<a[^>]*href="(/paper/[^"]+)"[^>]*data-test-id="paper-title"[^>]*>(.*?)</a>',
-                r'<a[^>]*href="(/paper/[^"]+)"[^>]*class="[^"]*title[^"]*"[^>]*>(.*?)</a>',
-                # 通用文章链接
-                r'<h[23][^>]*>.*?<a[^>]*href="(/paper/[^"]+)"[^>]*>(.*?)</a>.*?</h[23]>',
-            ]
-
-            for pattern in patterns:
-                matches = re.findall(pattern, html, re.DOTALL | re.IGNORECASE)
-                for match in matches[:8]:
-                    if isinstance(match, tuple):
-                        link, title = match
-                    else:
-                        continue
-
-                    # 清理标题
-                    title = re.sub(r'<[^>]+>', '', title).strip()
-                    if not title or len(title) < 10:
-                        continue
-
-                    # 确保链接完整
-                    if link.startswith('/'):
-                        link = 'https://www.semanticscholar.org' + link
-
-                    items.append({
-                        'title': title,
-                        'abstract': '',
-                        'url': link,
-                        'date': datetime.now().strftime('%Y-%m-%d'),
-                        'source': source_name
-                    })
-
-            # 去重
-            seen = set()
-            unique_items = []
-            for item in items:
-                if item['url'] not in seen:
-                    seen.add(item['url'])
-                    unique_items.append(item)
-
-            return unique_items[:5]
-        except Exception as e:
-            log_message(f"解析Semantic Scholar失败: {str(e)}", "ERROR")
+            items = self._try_static_crawl(source)
+            if items:
+                self._log(f"{source_name} 获取 {len(items)} 条")
+                return items
+            items = self._try_js_crawl(source)
+            if items:
+                self._log(f"{source_name} JS渲染获取 {len(items)} 条")
+                return items
+            self._mark_failed(source, "RSS解析失败")
             return []
 
-    def parse_aminer(self, html, source_name):
-        """解析AMiner网页"""
-        items = []
-        try:
-            # AMiner常见文章模式
-            patterns = [
-                # 论文标题链接
-                r'<a[^>]*href="(/pub/[^"]+)"[^>]*class="[^"]*title[^"]*"[^>]*>(.*?)</a>',
-                r'<a[^>]*href="(/pub/[^"]+)"[^>]*target="_blank"[^>]*>([^<]+)</a>',
-                # 通用链接模式
-                r'<h[23][^>]*>.*?<a[^>]*href="(/pub/[^"]+)"[^>]*>(.*?)</a>.*?</h[23]>',
-            ]
-
-            for pattern in patterns:
-                matches = re.findall(pattern, html, re.DOTALL | re.IGNORECASE)
-                for match in matches[:8]:
-                    if isinstance(match, tuple):
-                        link, title = match
-                    else:
-                        continue
-
-                    title = re.sub(r'<[^>]+>', '', title).strip()
-                    if not title or len(title) < 10:
-                        continue
-
-                    if link.startswith('/'):
-                        link = 'https://www.aminer.cn' + link
-
-                    items.append({
-                        'title': title,
-                        'abstract': '',
-                        'url': link,
-                        'date': datetime.now().strftime('%Y-%m-%d'),
-                        'source': source_name
-                    })
-
-            # 去重
-            seen = set()
-            unique_items = []
-            for item in items:
-                if item['url'] not in seen:
-                    seen.add(item['url'])
-                    unique_items.append(item)
-
-            return unique_items[:5]
-        except Exception as e:
-            log_message(f"解析AMiner失败: {str(e)}", "ERROR")
+        if source_type == 'json':
+            items = self._try_static_crawl(source)
+            if items:
+                self._log(f"{source_name} 获取 {len(items)} 条")
+                return items
+            self._mark_failed(source, "JSON解析失败")
             return []
 
-    def parse_the_gradient(self, html, source_name):
-        """解析The Gradient网页"""
-        items = []
-        try:
-            # The Gradient是博客网站，文章通常在列表中
-            patterns = [
-                # 文章标题链接模式
-                r'<a[^>]*href="(https://thegradient\.pub/[^"]+/)"[^>]*class="[^"]*post[^"]*"[^>]*>(.*?)</a>',
-                r'<h[123][^>]*>.*?<a[^>]*href="(/[^"]+/)"[^>]*>(.*?)</a>.*?</h[123]>',
-                r'<a[^>]*rel="bookmark"[^>]*href="(/[^"]+/)"[^>]*>(.*?)</a>',
-            ]
+        if source_type == 'web':
+            if self._has_api(source_url):
+                items = self._try_api_fallback(source, keywords)
+                if items:
+                    self._log(f"{source_name} API回退获取 {len(items)} 条")
+                    return items
 
-            for pattern in patterns:
-                matches = re.findall(pattern, html, re.DOTALL | re.IGNORECASE)
-                for match in matches[:8]:
-                    if isinstance(match, tuple):
-                        link, title = match
-                    else:
-                        continue
+            items = self._try_static_crawl(source)
+            if items:
+                self._log(f"{source_name} 静态爬取获取 {len(items)} 条")
+                return items
 
-                    title = re.sub(r'<[^>]+>', '', title).strip()
-                    if not title or len(title) < 10:
-                        continue
+            if self._needs_js(source_url):
+                items = self._try_js_crawl(source)
+                if items:
+                    self._log(f"{source_name} JS渲染获取 {len(items)} 条")
+                    return items
 
-                    # 过滤导航链接
-                    if any(x in link.lower() for x in ['about', 'contact', 'subscribe', 'wp-content']):
-                        continue
-
-                    # 确保链接完整
-                    if link.startswith('/'):
-                        link = 'https://thegradient.pub' + link
-
-                    items.append({
-                        'title': title,
-                        'abstract': '',
-                        'url': link,
-                        'date': datetime.now().strftime('%Y-%m-%d'),
-                        'source': source_name
-                    })
-
-            # 去重
-            seen = set()
-            unique_items = []
-            for item in items:
-                if item['url'] not in seen:
-                    seen.add(item['url'])
-                    unique_items.append(item)
-
-            return unique_items[:5]
-        except Exception as e:
-            log_message(f"解析The Gradient失败: {str(e)}", "ERROR")
+            self._mark_failed(source, "所有爬取策略均失败")
             return []
 
-    def parse_generic_web(self, html, source_name, base_url):
-        """通用网页解析 - 提取可能的学术文章"""
-        items = []
-        try:
-            # 通用模式：查找所有可能的标题链接
-            # 匹配2-5个单词的标题（可能是文章标题）
-            patterns = [
-                r'<a[^>]*href="([^"]+)"[^>]*>([^<]{30,150})</a>',
-                r'<h[234][^>]*>.*?<a[^>]*href="([^"]+)"[^>]*>([^<]+)</a>.*?</h[234]>',
-            ]
+        self._mark_failed(source, f"未知的源类型: {source_type}")
+        return []
 
-            for pattern in patterns:
-                matches = re.findall(pattern, html, re.DOTALL | re.IGNORECASE)
-                for match in matches[:10]:
-                    if isinstance(match, tuple):
-                        link, title = match
-                    else:
-                        continue
-
-                    title = re.sub(r'<[^>]+>', '', title).strip()
-
-                    # 过滤条件
-                    if len(title) < 20 or len(title) > 200:
-                        continue
-                    if any(x in title.lower() for x in ['javascript', 'css', 'login', 'signup', 'home', 'about']):
-                        continue
-                    if title.count(' ') > 20:  # 太长的可能是段落而非标题
-                        continue
-
-                    # 确保链接完整
-                    if link.startswith('/'):
-                        parsed = urlparse(base_url)
-                        link = f"{parsed.scheme}://{parsed.netloc}{link}"
-                    elif not link.startswith('http'):
-                        continue
-
-                    items.append({
-                        'title': title,
-                        'abstract': '',
-                        'url': link,
-                        'date': datetime.now().strftime('%Y-%m-%d'),
-                        'source': source_name
-                    })
-
-            # 去重
-            seen = set()
-            unique_items = []
-            for item in items:
-                if item['url'] not in seen:
-                    seen.add(item['url'])
-                    unique_items.append(item)
-
-            return unique_items[:5]
-        except Exception as e:
-            log_message(f"通用解析失败 {source_name}: {str(e)}", "ERROR")
-            return []
-
-    def crawl_all(self, sources):
+    def crawl_all(self, sources, keywords=None):
         """爬取所有启用的来源"""
         enabled_sources = [s for s in sources if s.get('enabled', True)]
         log_message(f"开始爬取 {len(enabled_sources)} 个学术信息源...")
 
+        if keywords is None:
+            keywords = []
+
         all_items = []
         for source in enabled_sources:
-            items = self.crawl_source(source)
+            items = self.crawl_source(source, keywords=keywords)
             all_items.extend(items)
-            time.sleep(1.5)  # 礼貌延迟
+            time.sleep(1.5)
 
+        failed_count = len(self.failed_sources)
         log_message(f"爬取完成，共获取 {len(all_items)} 条学术资讯")
+        if failed_count > 0:
+            log_message(f"⚠️ {failed_count} 个源爬取失败，需要人工介入", "WARNING")
+            for fs in self.failed_sources:
+                log_message(f"  失败源: {fs['name']} - {fs['reason']}", "WARNING")
+                log_message(f"  建议: {fs['suggestion']}", "WARNING")
+
         return all_items
 
 
@@ -718,7 +593,7 @@ class InfoProcessor:
 """
             # 如果有GitHub链接
             if item.get('github'):
-                entry += f"**Code**: [GitHub]({item['github']})\n"
+                entry += f"**Code**: [GitHub]({item['github']})" + "\n"
         else:
             entry = f"""### {index}. {title_display}
 
@@ -733,7 +608,7 @@ class InfoProcessor:
 """
             # 如果有GitHub链接
             if item.get('github'):
-                entry += f"**代码实现**：[GitHub]({item['github']})\n"
+                entry += f"**代码实现**：[GitHub]({item['github']})" + "\n"
 
         entry += "\n---\n\n"
         return entry
@@ -797,7 +672,7 @@ Based on keyword matching results:
 
             for src, count in sorted(source_counts.items(), key=lambda x: -x[1]):
                 bar = '█' * count
-                report += f"- **{src}**: {bar} ({count} papers)\n"
+                report += f"- **{src}**: {bar} ({count} papers)" + "\n"
 
             report += """
 ---
@@ -869,7 +744,7 @@ Based on keyword matching results:
 
             for src, count in sorted(source_counts.items(), key=lambda x: -x[1]):
                 bar = '█' * count
-                report += f"- **{src}**: {bar} ({count}篇)\n"
+                report += f"- **{src}**: {bar} ({count}篇)" + "\n"
 
             report += f"""
 ---
@@ -883,6 +758,72 @@ Based on keyword matching results:
 ---
 
 *本简报由您的学术助手自动生成 | 愿知识照亮前路 🌟*
+"""
+
+        return report
+
+    def generate_failed_sources_report(self, failed_sources):
+        """生成失败源报告 - 提示用户手动输入"""
+        is_english = not Translator.enabled
+
+        if is_english:
+            report = f"""
+---
+
+## ⚠️ Failed Sources - Manual Input Required
+
+The following {len(failed_sources)} source(s) could not be automatically crawled.
+You can manually add information from these sources.
+
+| Source | URL | Reason | Suggestion |
+|--------|-----|--------|------------|
+"""
+            for fs in failed_sources:
+                api_key_note = ""
+                if fs.get('api_key_url'):
+                    api_key_note = f" [Get API Key]({fs['api_key_url']})"
+                report += f"| {fs['name']} | {fs['url'][:50]}... | {fs['reason']} | {fs['suggestion']}{api_key_note} |" + "\n"
+
+            report += """
+### How to Help
+
+1. **Visit the URL manually** and find relevant academic papers
+2. **Add papers manually** by editing the config or using the GUI
+3. **Switch to API mode** if the source has a public API
+4. **Get an API Key** if the source requires one (links provided above)
+5. **Report the issue** so we can improve the crawler
+
+---
+*Failed sources require manual intervention | Your input helps improve automation 🤝*
+"""
+        else:
+            report = f"""
+---
+
+## ⚠️ 爬取失败源 - 需要人工输入
+
+以下 {len(failed_sources)} 个源无法自动爬取，您可以手动补充这些源的信息。
+
+| 来源 | URL | 失败原因 | 建议 |
+|------|-----|----------|------|
+"""
+            for fs in failed_sources:
+                api_key_note = ""
+                if fs.get('api_key_url'):
+                    api_key_note = f" [获取API Key]({fs['api_key_url']})"
+                report += f"| {fs['name']} | {fs['url'][:50]}... | {fs['reason']} | {fs['suggestion']}{api_key_note} |" + "\n"
+
+            report += """
+### 如何帮助改进
+
+1. **手动访问URL**，查找相关学术论文
+2. **手动添加论文** - 通过GUI界面或编辑配置文件
+3. **切换为API模式** - 如果该源有公开API
+4. **申请API Key** - 如果该源需要密钥（上方已提供链接）
+4. **反馈问题** - 帮助我们改进爬取器
+
+---
+*失败源需要人工介入 | 您的输入有助于改进自动化 🤝*
 """
 
         return report
@@ -908,9 +849,19 @@ class EmailSender:
         self.smtp_server = config.get('smtp_server', 'smtp.qq.com')
         self.smtp_port = config.get('smtp_port', 587)
         self.sender_email = config.get('sender_email', '')
-        self.sender_password = config.get('sender_password', '')
+        self.sender_password = self._decode_pwd(config.get('sender_password', ''))
         self.receiver_email = config.get('receiver_email', '')
         self.subject_prefix = config.get('subject_prefix', '[学术简报]')
+
+    @staticmethod
+    def _decode_pwd(value: str) -> str:
+        if value and value.startswith("enc:"):
+            try:
+                return base64.b64decode(value[4:]).decode('utf-8')
+            except Exception:
+                return value
+        return value
+
         self.enabled = config.get('enabled', False)
 
     def send_report(self, report_content, report_file=None):
@@ -1102,7 +1053,7 @@ class ReminderSystem:
             log_file = LOG_DIR / f"reminders_{date_str}.log"
 
             with open(log_file, 'a', encoding='utf-8') as f:
-                f.write(f"[{datetime.now().isoformat()}] 提醒: {current['title']} - {current['description']}\n")
+                f.write(f"[{datetime.now().isoformat()}] 提醒: {current['title']} - {current['description']}" + "\n")
 
 
 # ============ 主程序 ============
@@ -1134,9 +1085,10 @@ def main(mode=None):
 
     # 执行模式
     if mode in ["crawl", "all"]:
-        # 1. 爬取学术信息
+        # 1. 爬取学术信息（使用多架构自动降级）
         crawler = InfoCrawler()
-        items = crawler.crawl_all(config['news_sources'])
+        all_keywords = config.get('keywords', []) + config.get('keywords_cn', [])
+        items = crawler.crawl_all(config['news_sources'], keywords=all_keywords)
 
         # 2. 处理信息
         processor = InfoProcessor(config['keywords'])
@@ -1145,21 +1097,26 @@ def main(mode=None):
             max_items=config.get('max_items_per_source', 10)
         )
 
-        # 3. 保存报告
+        # 3. 添加失败源报告
+        failed_sources = crawler.get_failed_sources()
+        if failed_sources:
+            failed_report = processor.generate_failed_sources_report(failed_sources)
+            report += failed_report
+
+        # 4. 保存报告
         report_file = processor.save_report(report)
         log_message(f"学术简报已生成: {report_file}")
 
-        # 4. 发送邮件
+        # 5. 发送邮件
         email_config = config.get('email', {})
         if email_config.get('enabled', False):
             email_sender = EmailSender(email_config)
             email_sender.send_report(report, report_file)
 
-        # 5. 显示简报预览
+        # 6. 显示简报预览
         safe_print("\n" + "="*60)
         safe_print("简报预览（前3条）:")
         safe_print("="*60)
-        # 提取前3条显示
         lines = report.split('\n')
         preview_lines = []
         count = 0
@@ -1171,6 +1128,17 @@ def main(mode=None):
             preview_lines.append(line)
         safe_print('\n'.join(preview_lines))
         safe_print("\n" + "="*60)
+
+        # 7. 显示失败源摘要
+        if failed_sources:
+            safe_print("\n" + "="*60)
+            safe_print(f"⚠️ {len(failed_sources)} 个源爬取失败，需要人工介入:")
+            for fs in failed_sources:
+                safe_print(f"  - {fs['name']}: {fs['reason']}")
+                safe_print(f"    建议: {fs['suggestion']}")
+                if fs.get('api_key_url'):
+                    safe_print(f"    🔑 获取API Key: {fs['api_key_url']}")
+            safe_print("="*60)
 
     if mode in ["remind", "all"]:
         # 5. 检查日程提醒

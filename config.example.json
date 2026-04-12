@@ -29,17 +29,12 @@
     {
       "time": "09:00",
       "title": "学术早报",
-      "description": "主人，您不在的时候，喵去打探了一下外面的世界喵。今日最新学术资讯已整理完毕，请查阅。"
-    },
-    {
-      "time": "14:00",
-      "title": "下午工作",
-      "description": "处理重要任务，保持专注"
+      "description": "今日学术资讯已整理完毕"
     },
     {
       "time": "22:00",
       "title": "晚间复盘",
-      "description": "今日工作告一段落，回顾一下收获，为明天做好准备。早点休息，照顾好自己。"
+      "description": "回顾今日收获"
     }
   ],
   "keywords": [
@@ -47,25 +42,13 @@
     "machine learning",
     "big data",
     "public governance",
-    "digital governance",
-    "AI philosophy",
-    "local development",
-    "urban studies",
-    "policy",
-    "algorithm",
-    "neural network",
-    "deep learning",
-    "data mining",
-    "smart city",
-    "e-government"
+    "digital governance"
   ],
   "keywords_cn": [
     "人工智能",
     "大数据",
     "公共治理",
-    "人工智能哲学",
-    "数字治理",
-    "地方发展研究"
+    "数字治理"
   ],
   "output_format": "markdown",
   "translation": {
@@ -74,12 +57,17 @@
   },
   "max_items_per_source": 5,
   "email": {
-    "enabled": true,
+    "enabled": false,
     "smtp_server": "smtp.qq.com",
     "smtp_port": 587,
-    "sender_email": "yg1114702713@qq.com",
-    "sender_password": "gkjultbortxwbief",
-    "receiver_email": "yg1114702713@qq.com",
+    "sender_email": "",
+    "sender_password": "",
+    "receiver_email": "",
     "subject_prefix": "[学术简报]"
+  },
+  "api_keys": {
+    "semantic_scholar": "",
+    "openalex": "",
+    "core": ""
   }
 }
