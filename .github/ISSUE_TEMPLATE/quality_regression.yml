@@ -1,0 +1,67 @@
+name: Quality regression
+description: Report flaky behavior, broken tests, CI failures, or quality gate failures
+title: "[Quality]: "
+labels:
+  - quality
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when a quality gate fails or behavior becomes flaky, even if the user-facing bug is not yet clear.
+
+  - type: dropdown
+    id: failing_gate
+    attributes:
+      label: Failing gate
+      options:
+        - compileall
+        - pytest
+        - Web UI smoke test
+        - Packaging build
+        - Dependency audit
+        - Manual regression check
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: failure
+    attributes:
+      label: Failure details
+      description: Paste the key failure output. Remove secrets and local private data.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Recent context
+      description: What changed recently, if known?
+      placeholder: This started after changing ...
+
+  - type: textarea
+    id: expected_gate
+    attributes:
+      label: Expected passing command or check
+      placeholder: |
+        python -m compileall -q app.py launcher.py src tests
+        python -m pytest
+    validations:
+      required: true
+
+  - type: textarea
+    id: suspected_area
+    attributes:
+      label: Suspected area
+      placeholder: Config loading, web app startup, schedule parsing, package imports...
+
+  - type: checkboxes
+    id: follow_up
+    attributes:
+      label: Follow-up expectations
+      options:
+        - label: The fix should add or update a regression test when practical.
+          required: true
+        - label: The fix should document any manual check that cannot be automated yet.
+          required: true

@@ -1,0 +1,81 @@
+name: Maintenance task
+description: Track cleanup, refactoring, dependency, testing, or repository hygiene work
+title: "[Maintenance]: "
+labels:
+  - maintenance
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for quality work that keeps the project maintainable: tests, refactors, dependency updates, CI, docs, packaging cleanup, or repository hygiene.
+
+  - type: textarea
+    id: task
+    attributes:
+      label: Task summary
+      description: What maintenance work should be done?
+      placeholder: Add regression tests for config loading failures...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Tests
+        - Refactor
+        - CI and automation
+        - Dependency update
+        - Security
+        - Documentation
+        - Packaging
+        - Repository hygiene
+        - Developer experience
+    validations:
+      required: true
+
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Why this matters
+      description: Explain the risk, friction, or quality gap this task addresses.
+      placeholder: This area is frequently changed by AI-assisted edits and currently has no regression coverage.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: List files, modules, or workflows likely to be touched.
+      placeholder: |
+        - `src/daily_automation/config_manager.py`
+        - `tests/test_config_manager.py`
+        - `docs/CODE_QUALITY_AND_MAINTENANCE.md`
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of done
+      placeholder: |
+        - New tests cover the changed behavior.
+        - `python -m compileall -q app.py launcher.py src tests` passes.
+        - `python -m pytest` passes.
+        - No generated files, logs, secrets, or runtime data are committed.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: guardrails
+    attributes:
+      label: Guardrails
+      options:
+        - label: This task should keep root Python files as compatibility wrappers unless a migration is explicitly planned.
+          required: true
+        - label: This task should avoid committing `runtime_local/`, logs, generated reports, binaries, or archives.
+          required: true
+        - label: This task should update docs if it changes commands, entry points, config, packaging, or workflow.
+          required: true

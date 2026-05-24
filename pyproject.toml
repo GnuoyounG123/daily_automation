@@ -8,9 +8,57 @@ version = "0.1.0"
 description = "Personal daily briefing and automation assistant"
 requires-python = ">=3.10"
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.8.0",
+]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+extend-exclude = [
+    "artifacts",
+    "build",
+    "customer_test_copy",
+    "dist",
+    "release",
+    "runtime_local",
+    "Setup_ForGemini",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.ruff.lint]
+select = [
+    "E4",
+    "E7",
+    "E9",
+    "F",
+    "I",
+    "B",
+    "C4",
+    "SIM",
+    "UP",
+    "RUF",
+]
+ignore = [
+    "RUF001",
+    "RUF002",
+    "RUF003",
+]
+fixable = ["ALL"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "E402",
+]

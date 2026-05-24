@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Code quality and maintenance pipeline
+    url: https://github.com/Pr1Stu/daily_automation/blob/main/docs/CODE_QUALITY_AND_MAINTENANCE.md
+    about: Read the project quality gate, review checklist, and maintenance cadence.
+  - name: Repository architecture
+    url: https://github.com/Pr1Stu/daily_automation/blob/main/docs/ARCHITECTURE.md
+    about: Check module boundaries and entry points before opening broad design issues.
