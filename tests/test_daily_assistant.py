@@ -45,5 +45,38 @@ class TestTranslator(unittest.TestCase):
         self.assertTrue(len(result) > 0)
 
 
+class TestWeatherAPI(unittest.TestCase):
+    def test_clothing_advice_uses_temperature_ranges(self):
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        from daily_assistant import WeatherAPI
+
+        self.assertEqual(WeatherAPI._get_clothing_advice("5"), "天气较凉，建议穿厚外套")
+        self.assertEqual(WeatherAPI._get_clothing_advice("15"), "天气温和，适合正常穿着")
+        self.assertEqual(WeatherAPI._get_clothing_advice("23"), "天气暖和，适合轻便穿着")
+        self.assertEqual(WeatherAPI._get_clothing_advice("31"), "天气炎热，注意防晒补水")
+
+    def test_parse_weather_data_for_23_degrees_is_not_cold(self):
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        from daily_assistant import WeatherAPI
+
+        data = {
+            "current_condition": [{
+                "weatherDesc": [{"value": "Patchy rain nearby"}],
+                "temp_C": "23",
+                "FeelsLikeC": "25",
+                "humidity": "52",
+                "windspeedKmph": "11",
+                "winddir16Point": "SSE",
+                "uvIndex": "2"
+            }],
+            "weather": [{}, {"weatherDesc": [{"value": "Cloudy"}]}]
+        }
+
+        weather = WeatherAPI._parse_weather_data(data)
+        self.assertEqual(weather["穿衣建议"], "天气暖和，适合轻便穿着")
+
+
 if __name__ == "__main__":
     unittest.main()

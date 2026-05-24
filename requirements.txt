@@ -5,6 +5,8 @@ requests>=2.28.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
 feedparser>=6.0.0
+ttkbootstrap>=1.10.1
+streamlit>=1.30.0
 
 # 可选依赖（增强爬取能力）
 httpx>=0.24.0
