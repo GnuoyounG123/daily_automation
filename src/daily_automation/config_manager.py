@@ -255,6 +255,12 @@ class ConfigManager:
             'required': True,
             'description': 'API Key required',
             'get_url': 'https://core.ac.uk/services/api'
+        },
+        'qweather': {
+            'name': 'QWeather',
+            'required': False,
+            'description': 'Optional weather provider key',
+            'get_url': 'https://dev.qweather.com/'
         }
     }
 
@@ -263,7 +269,8 @@ class ConfigManager:
         return config.get('api_keys', {
             'semantic_scholar': '',
             'openalex': '',
-            'core': ''
+            'core': '',
+            'qweather': ''
         })
 
     def get_api_key(self, service: str) -> str:
@@ -440,7 +447,8 @@ class ConfigManager:
             "api_keys": {
                 "semantic_scholar": "",
                 "openalex": "",
-                "core": ""
+                "core": "",
+                "qweather": ""
             },
             "weather_city": "Beijing",
             "university": "",

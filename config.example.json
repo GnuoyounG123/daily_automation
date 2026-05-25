@@ -68,6 +68,8 @@
   "api_keys": {
     "semantic_scholar": "",
     "openalex": "",
-    "core": ""
-  }
+    "core": "",
+    "qweather": ""
+  },
+  "weather_city": "Beijing"
 }

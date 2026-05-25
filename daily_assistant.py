@@ -11,6 +11,6 @@ if __name__ == "__main__":
     import sys
 
     if "--async" in sys.argv:
-        asyncio.run(main_async())
+        raise SystemExit(asyncio.run(main_async()))
     else:
-        main()
+        raise SystemExit(main())

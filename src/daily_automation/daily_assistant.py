@@ -9,6 +9,7 @@ import sys
 import json
 import time
 import re
+import asyncio
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -970,9 +971,19 @@ class InfoProcessor:
     def save_report(self, report):
         date_str = datetime.now().strftime("%Y%m%d")
         filename = DATA_DIR / f"academic_briefing_{date_str}.md"
+        final_report = report.rstrip() + f"""
+
+---
+
+## 生成信息
+
+- 输出文件：`{filename}`
+- 日志目录：`{LOG_DIR}`
+
+"""
 
         with open(filename, 'w', encoding='utf-8') as f:
-            f.write(report)
+            f.write(final_report)
 
         log_message(f"Report saved: {filename}")
         return filename
@@ -998,7 +1009,7 @@ class EmailSender:
         import base64
         if value.startswith("fernet:"):
             try:
-                crypto = PasswordCrypto(Path(__file__).parent)
+                crypto = PasswordCrypto(CONFIG_DIR)
                 return crypto.decrypt(value)
             except Exception:
                 return value
@@ -1014,7 +1025,7 @@ class EmailSender:
             log_message("Email disabled, skipping")
             return False
 
-        if not self.sender_email or not self.sender_password:
+        if not self.sender_email or not self.sender_password or not self.receiver_email:
             log_message("Email config incomplete", "WARNING")
             return False
 
@@ -1336,7 +1347,7 @@ class EmailSender:
             log_message("Email disabled, skipping")
             return False
 
-        if not self.sender_email or not self.sender_password:
+        if not self.sender_email or not self.sender_password or not self.receiver_email:
             log_message("Email config incomplete", "WARNING")
             return False
 
@@ -1368,6 +1379,19 @@ class EmailSender:
         except Exception as e:
             log_message(f"Email failed: {str(e)}", "ERROR")
             return False
+
+    def send_test_email(self):
+        today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        html_content = f"""
+<html>
+<body>
+  <h2>Daily Automation 测试邮件</h2>
+  <p>这封邮件用于验证本地邮箱配置是否可用。</p>
+  <p>发送时间：{today}</p>
+</body>
+</html>
+"""
+        return self.send_combined_email(html_content)
 
 
 # ============ Reminders ============
@@ -1454,6 +1478,19 @@ def main(mode=None):
         mode = sys.argv[1] if len(sys.argv) > 1 else "all"
 
     log_message(f"Mode: {mode}")
+
+    valid_modes = {"all", "crawl", "remind", "test-email"}
+    if mode not in valid_modes:
+        log_message(f"Unknown mode: {mode}", "ERROR")
+        return 2
+
+    if mode == "test-email":
+        email_sender = EmailSender(config.get('email', {}))
+        if email_sender.send_test_email():
+            log_message("Test email sent")
+            return 0
+        log_message("Test email failed", "ERROR")
+        return 2
 
     if mode in ["crawl", "all"]:
         weather = None
@@ -1548,6 +1585,7 @@ def main(mode=None):
     log_message("=" * 60)
     log_message("Daily Automation Assistant complete")
     log_message("=" * 60)
+    return 0
 
 
 async def main_async(mode=None):
@@ -1569,6 +1607,19 @@ async def main_async(mode=None):
         mode = sys.argv[idx] if len(sys.argv) > idx else "all"
 
     log_message(f"Mode: {mode} (async)")
+
+    valid_modes = {"all", "crawl", "remind", "test-email"}
+    if mode not in valid_modes:
+        log_message(f"Unknown mode: {mode}", "ERROR")
+        return 2
+
+    if mode == "test-email":
+        email_sender = EmailSender(config.get('email', {}))
+        if email_sender.send_test_email():
+            log_message("Test email sent")
+            return 0
+        log_message("Test email failed", "ERROR")
+        return 2
 
     if mode in ["crawl", "all"]:
         weather = None
@@ -1663,10 +1714,11 @@ async def main_async(mode=None):
     log_message("=" * 60)
     log_message("Daily Automation Assistant (Async mode) complete")
     log_message("=" * 60)
+    return 0
 
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--async":
-        asyncio.run(main_async())
+        raise SystemExit(asyncio.run(main_async()))
     else:
-        main()
+        raise SystemExit(main())

@@ -26,7 +26,7 @@ Generated output belongs in ignored paths:
 
 | Pattern | Reason |
 | --- | --- |
-| `runtime_local/` | Local config, secrets, generated briefings, and logs |
+| `runtime_local/` | Local config, secrets, run records, generated briefings, and logs |
 | `artifacts/` | PyInstaller build output and release packages |
 | `release/` | Legacy release residue waiting for manual cleanup |
 | `Setup_ForGemini/` | Local distribution scratch directory |
@@ -45,3 +45,16 @@ git rm --cached check_exe.py debug_config.py pack_release.py run_config_test.py
 
 Use `git status --short` after each group. The commands above keep local files
 on disk when `--cached` is used, but stage their removal from version control.
+
+## Pre-commit checks
+
+Before pushing shared code, run:
+
+```powershell
+python scripts\security_check.py
+python -m compileall -q app.py launcher.py src tests
+python -m pytest
+```
+
+The security check fails if local runtime folders, private config, or obvious
+access token patterns are accidentally tracked.

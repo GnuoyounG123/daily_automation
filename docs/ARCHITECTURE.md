@@ -21,6 +21,8 @@ cleanly.
 | --- | --- | --- |
 | Paths | `src/daily_automation/app_paths.py` | Development and PyInstaller path resolution |
 | Config | `src/daily_automation/config_manager.py` | JSON config CRUD and defaults |
+| Diagnostics | `src/daily_automation/config_diagnostics.py` | Config, path, source, email, and API readiness checks |
+| Run records | `src/daily_automation/run_records.py` | Persistent local task execution records under `runtime_local/runs/` |
 | Secrets | `src/daily_automation/password_crypto.py` | Local Fernet password encryption |
 | Fetching | `src/daily_automation/web_fetcher.py` | Multi-backend HTTP and JS-rendered fetching |
 | Parsing | `src/daily_automation/html_parser.py` | HTML, RSS, and fallback parsing strategies |
@@ -37,6 +39,7 @@ cleanly.
 | `tests/` | Unit tests only | Track |
 | `docs/` | Architecture and maintenance notes | Track |
 | `runtime_local/` | Local config, secrets, generated reports, and logs | Ignore |
+| `.github/workflows/` | GitHub Actions CI for compile, tests, and security checks | Track |
 | `packaging/` | PyInstaller specs and build helpers | Track |
 | `scripts/windows/` | Windows run and scheduled-task scripts | Track |
 | `archive/legacy_scripts/` | Historical one-off repair scripts | Track or delete after review |

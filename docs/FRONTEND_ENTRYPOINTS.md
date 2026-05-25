@@ -30,7 +30,12 @@ Backend task commands remain unchanged:
 python daily_assistant.py all
 python daily_assistant.py crawl
 python daily_assistant.py remind
+python daily_assistant.py test-email
 ```
 
 Do not point "启动网页端" scripts at the Tkinter executable. The web UI and
 desktop GUI are separate entry points over the same backend and runtime data.
+
+The Streamlit UI persists each manual run under `runtime_local/runs/` so users
+can inspect whether a task succeeded, warned, failed, timed out, or never
+started.

@@ -12,7 +12,7 @@
 | 邮件推送 | 将简报或每日计划发送到指定邮箱，授权码会加密保存在本地 |
 | 天气建议 | 根据天气数据生成简短穿衣/出行建议 |
 | 课程与提醒 | 管理课程表、每日任务和提醒，输出 HTML 日程 |
-| 失败可见 | 网页端和桌面端都会显示任务进度、运行日志、警告和错误摘要 |
+| 失败可见 | 网页端会显示配置检查、任务进度、运行记录、警告和错误摘要 |
 
 ## 一分钟启动
 
@@ -38,10 +38,11 @@ scripts\windows\启动网页端.bat
 第一次使用建议按这个顺序：
 
 1. 打开网页端。
-2. 进入“配置”，填写邮箱、天气城市和需要的 API Key。
-3. 回到“今日简报”，点击“生成并发送今日简报”。
-4. 在页面中查看实时日志、运行耗时和结果提示。
-5. 到 `runtime_local\data\` 查看生成的简报或日程文件。
+2. 进入“配置检查”，确认后端入口、运行目录、输出目录和信息源状态。
+3. 进入“配置”，填写邮箱、天气城市、关键词和需要的 API Key。
+4. 回到“今日简报”，点击“生成并发送今日简报”。
+5. 在页面中查看实时日志、运行记录、警告和错误摘要。
+6. 到 `runtime_local\data\` 查看生成的简报或日程文件。
 
 ## 入口说明
 
@@ -52,6 +53,7 @@ scripts\windows\启动网页端.bat
 | 运行完整后端流程 | `python daily_assistant.py all` |
 | 只生成学术简报 | `python daily_assistant.py crawl` |
 | 只检查提醒/课程 | `python daily_assistant.py remind` |
+| 发送测试邮件 | `python daily_assistant.py test-email` |
 | 启动备用桌面 GUI | `python gui_app.py` |
 
 ## 项目结构
@@ -65,6 +67,8 @@ daily_automation
 ├─ src\daily_automation\          # 正式源码包
 │  ├─ web_app.py                  # Streamlit 本地网页端
 │  ├─ daily_assistant.py          # 抓取、筛选、报告、邮件、提醒主流程
+│  ├─ config_diagnostics.py       # 配置检查与前端诊断
+│  ├─ run_records.py              # 任务运行记录读写
 │  ├─ gui_app.py                  # Tkinter 桌面备用界面
 │  ├─ config_manager.py           # 配置读写和默认值
 │  ├─ schedule_manager.py         # 课程、任务和每日计划
@@ -74,6 +78,8 @@ daily_automation
 │  ├─ password_crypto.py          # 本地授权码加密
 │  └─ app_paths.py                # 开发/打包路径管理
 ├─ scripts\windows\               # Windows 启动和计划任务脚本
+├─ scripts\security_check.py      # 提交前安全检查
+├─ .github\workflows\ci.yml       # GitHub Actions 检查
 ├─ packaging\pyinstaller\         # PyInstaller 打包脚本
 ├─ docs\                          # 架构、入口和仓库卫生说明
 ├─ tests\                         # 单元测试
@@ -97,6 +103,7 @@ runtime_local\.secret_key
 runtime_local\data\academic_briefing_YYYYMMDD.md
 runtime_local\data\daily_plan_YYYYMMDD.html
 runtime_local\logs\
+runtime_local\runs\YYYYMMDD-HHMMSS-xxxxxxxx.json
 ```
 
 这些文件可能包含邮箱、授权码、API Key、日志和个人日程，默认不进入 Git。
@@ -117,6 +124,7 @@ runtime_local\logs\
 ## 开发检查
 
 ```powershell
+python scripts\security_check.py
 python -m compileall -q app.py launcher.py src tests
 python -m pytest
 ```
@@ -124,7 +132,7 @@ python -m pytest
 当前测试集应通过：
 
 ```text
-23 passed
+27 passed
 ```
 
 ## 打包桌面版
@@ -157,4 +165,4 @@ packaging\pyinstaller\build.bat
 
 ## 注意
 
-这个项目是本地自动化工具，不是云服务。运行任务时会访问外部信息源和邮件服务器；如果网络、API Key 或邮箱授权码未配置完整，前端会显示警告或错误摘要。
+这个项目是本地自动化工具，不是云服务。运行任务时会访问外部信息源和邮件服务器；如果网络、API Key 或邮箱授权码未配置完整，前端会显示警告或错误摘要。真实邮件只会在用户启用邮件并手动运行完整流程或测试邮件时发送。
