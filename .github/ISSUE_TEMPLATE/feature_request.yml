@@ -1,0 +1,85 @@
+name: Feature request
+description: Propose a user-facing improvement or new capability
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for user-facing features. For cleanup, refactors, dependency updates, or quality work, use the maintenance task template instead.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or user need
+      description: What user problem does this solve?
+      placeholder: I want the briefing to include papers from ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior, UI, command, or workflow you want.
+      placeholder: Add a configuration field for ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Primary area
+      options:
+        - Web UI
+        - Backend workflow
+        - Configuration
+        - Schedule and reminders
+        - Email delivery
+        - Fetching and parsing
+        - Academic APIs
+        - Packaging and installer
+        - Documentation
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Mention any simpler workaround or rejected approach.
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What must be true before this feature is considered done?
+      placeholder: |
+        - The feature can be configured from the web UI.
+        - Missing API keys show a warning instead of a traceback.
+        - Generated files still land under `runtime_local/data/`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: test_plan
+    attributes:
+      label: Test plan
+      description: List automated tests or manual smoke checks that should cover this feature.
+      placeholder: |
+        - Add unit tests for ...
+        - Run `python -m pytest`
+        - Smoke test `python launcher.py web`
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints
+      options:
+        - label: This feature should not require real API keys, email credentials, or network access in unit tests.
+          required: true
+        - label: This feature should keep local runtime data under `runtime_local/`.
+          required: true
+        - label: This feature may require README or docs updates.
+          required: false
