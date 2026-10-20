@@ -10,6 +10,7 @@ import os
 import sys
 import json
 import random
+from html import escape
 from datetime import datetime, timedelta
 from pathlib import Path
 import smtplib
@@ -155,7 +156,7 @@ def save_weekly_tasks(tasks):
 
 # ============ 每日任务生成 ============
 
-def get_today_schedule(schedule, daily_tasks):
+def get_today_schedule(schedule, daily_tasks, today=None):
     """获取今天的课表和任务"""
     # 获取今天是星期几
     weekday_map = {
@@ -168,12 +169,15 @@ def get_today_schedule(schedule, daily_tasks):
         6: "Sunday"
     }
 
-    today_weekday = datetime.now().weekday()
+    today = today or datetime.now().date()
+    today_weekday = today.weekday()
     today_name = weekday_map[today_weekday]
-    today_date = datetime.now().strftime("%Y年%m月%d日")
+    today_date = today.strftime("%Y年%m月%d日")
 
     # 获取今天的课程
-    today_courses = schedule.get("week_schedule", {}).get(today_name, [])
+    from .course_calendar import course_on_date
+    today_courses = [course for course in schedule.get("week_schedule", {}).get(today_name, [])
+                     if course_on_date(course, schedule, today)]
 
     # 获取今天的任务
     today_tasks = daily_tasks.get(today_name, [])
@@ -186,20 +190,20 @@ def get_today_schedule(schedule, daily_tasks):
     }
 
 
-def generate_daily_plan(schedule, daily_tasks):
+def generate_daily_plan(schedule, daily_tasks, campus_html="", today=None):
     """生成每日计划"""
-    today_info = get_today_schedule(schedule, daily_tasks)
+    today_info = get_today_schedule(schedule, daily_tasks, today)
 
     greeting = get_random_greeting()
     encouragement = get_random_encouragement()
 
     # 生成HTML邮件
-    html = generate_daily_html(today_info, greeting, encouragement)
+    html = generate_daily_html(today_info, greeting, encouragement, campus_html)
 
     return html, today_info
 
 
-def generate_daily_html(today_info, greeting, encouragement):
+def generate_daily_html(today_info, greeting, encouragement, campus_html=""):
     """生成美观的每日计划HTML"""
     date = today_info["date"]
     weekday = today_info["weekday"]
@@ -223,10 +227,10 @@ def generate_daily_html(today_info, greeting, encouragement):
         for course in courses:
             courses_html += f"""
             <div class="course-item">
-                <div class="course-time">{course.get('time', '')}</div>
+                <div class="course-time">{escape(str(course.get('time', '')))}</div>
                 <div class="course-info">
-                    <div class="course-name">{course.get('name', '')}</div>
-                    <div class="course-location">📍 {course.get('location', '')}</div>
+                    <div class="course-name">{escape(str(course.get('name', '')))}</div>
+                    <div class="course-location">📍 {escape(str(course.get('location', '')))}</div>
                 </div>
             </div>
             """
@@ -237,8 +241,8 @@ def generate_daily_html(today_info, greeting, encouragement):
     tasks_html = ""
     if tasks:
         for task in tasks:
-            content = task.get("content", "")
-            note = task.get("note", "")
+            content = escape(str(task.get("content", "")))
+            note = escape(str(task.get("note", "")))
 
             # 构建任务显示
             task_display = content
@@ -472,6 +476,7 @@ def generate_daily_html(today_info, greeting, encouragement):
                 </div>
                 {tasks_html}
             </div>
+            {campus_html}
         </div>
 
         <div class="footer">
@@ -562,10 +567,11 @@ def main():
     else:
         log_message("未找到config.json，正在创建默认配置...")
         default_config = {
+            "config_version": 1,
             "news_sources": [
                 {"name": "arXiv AI", "url": "http://export.arxiv.org/api/query?search_query=cat:cs.AI+OR+cat:cs.LG+OR+cat:cs.CL&sortBy=submittedDate&sortOrder=descending&max_results=10", "type": "rss", "enabled": True},
-                {"name": "Semantic Scholar", "url": "https://www.semanticscholar.org/", "type": "web", "enabled": True},
-                {"name": "AMiner", "url": "https://www.aminer.cn/", "type": "web", "enabled": True},
+                {"name": "Semantic Scholar", "url": "https://api.semanticscholar.org/graph/v1/paper/search", "type": "api", "enabled": True},
+                {"name": "AMiner", "url": "https://www.aminer.cn/", "type": "web", "enabled": False, "desc": "AMiner 暂未提供免密钥 API，当前版本已停用"},
                 {"name": "The Gradient", "url": "https://thegradient.pub/", "type": "web", "enabled": True}
             ],
             "reminders": [

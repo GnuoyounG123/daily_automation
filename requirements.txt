@@ -11,6 +11,8 @@ streamlit>=1.30.0
 # 可选依赖（增强爬取能力）
 httpx>=0.24.0
 selenium>=4.10.0
+dingtalk-stream>=0.24.3,<1
 
 # 安全依赖（密码加密）
 cryptography>=41.0.0
+tzdata>=2024.1

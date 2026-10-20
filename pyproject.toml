@@ -8,9 +8,11 @@ version = "0.1.0"
 description = "Personal daily briefing and automation assistant"
 requires-python = ">=3.10"
 
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-

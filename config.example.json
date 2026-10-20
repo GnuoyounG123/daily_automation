@@ -1,4 +1,5 @@
 {
+  "config_version": 1,
   "news_sources": [
     {
       "name": "arXiv AI",
@@ -8,15 +9,16 @@
     },
     {
       "name": "Semantic Scholar",
-      "url": "https://www.semanticscholar.org/",
-      "type": "web",
+      "url": "https://api.semanticscholar.org/graph/v1/paper/search",
+      "type": "api",
       "enabled": true
     },
     {
       "name": "AMiner",
       "url": "https://www.aminer.cn/",
       "type": "web",
-      "enabled": true
+      "enabled": false,
+      "desc": "AMiner 暂未提供免密钥 API，当前版本已停用"
     },
     {
       "name": "The Gradient",
@@ -71,5 +73,24 @@
     "core": "",
     "qweather": ""
   },
-  "weather_city": "Beijing"
+  "weather_city": "Beijing",
+  "campus": {
+    "enabled": false,
+    "lms_url": "https://course.zju.edu.cn/",
+    "zdbk_url": "https://zdbk.zju.edu.cn/jwglxt/xtgl/login_slogin.html?language=zh_CN",
+    "public_url": "https://zdbk.zju.edu.cn/jwglxt/xtgl/xwck_cxMoreLoginNews.html",
+    "username": "",
+    "password": "",
+    "remember_password": false,
+    "academic_year": "",
+    "term": "",
+    "grade": "",
+    "college": "",
+    "major": "",
+    "timetable_url": "",
+    "lms_extra_urls": [],
+    "semester_start": ""
+  },
+  "deepseek": {"model": "deepseek-flash", "api_key": ""},
+  "dingtalk": {"client_id": "", "client_secret": "", "allowed_sender_ids": []}
 }

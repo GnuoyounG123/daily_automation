@@ -82,6 +82,7 @@ class SemanticScholarApi:
         self._fetcher = WebFetcher()
         self._async_fetcher = None
         self._api_key = _get_api_key('semantic_scholar')
+        self.last_error = ""
 
     async def _get_async_fetcher(self):
         if self._async_fetcher is None:
@@ -91,6 +92,7 @@ class SemanticScholarApi:
 
     def search(self, keywords: List[str], max_results: int = 10) -> List[dict]:
         items = []
+        self.last_error = ""
         query = " ".join(keywords[:3])
         year = datetime.now().year
         url = (
@@ -105,12 +107,15 @@ class SemanticScholarApi:
             headers['x-api-key'] = self._api_key
 
         result = self._fetcher.fetch(url, timeout=20, max_retries=2, headers=headers if headers else None)
-        if not result.content or result.error:
+        if result.status_code == 429:
+            time.sleep(5)
+            result = self._fetcher.fetch(url, timeout=20, headers=headers if headers else None)
+        if result.status_code != 200 or not result.content or result.error:
             if result.status_code == 429:
-                time.sleep(5)
-                result = self._fetcher.fetch(url, timeout=20, headers=headers if headers else None)
-            if not result.content or result.error:
-                return items
+                self.last_error = "HTTP 429 限流，请配置 API Key 或稍后重试"
+            else:
+                self.last_error = f"请求失败（{result.error or 'HTTP ' + str(result.status_code)}）"
+            return items
 
         try:
             data = json.loads(result.content)
@@ -137,6 +142,7 @@ class SemanticScholarApi:
                     'authors': author_names
                 })
         except Exception:
+            self.last_error = "返回内容不是有效 JSON"
             return []
 
         return items
@@ -158,12 +164,15 @@ class SemanticScholarApi:
 
         fetcher = await self._get_async_fetcher()
         result = await fetcher.fetch(url, timeout=20, max_retries=2, headers=headers if headers else None)
-        if not result.content or result.error:
+        if result.status_code == 429:
+            await asyncio.sleep(5)
+            result = await fetcher.fetch(url, timeout=20, headers=headers if headers else None)
+        if result.status_code != 200 or not result.content or result.error:
             if result.status_code == 429:
-                await asyncio.sleep(5)
-                result = await fetcher.fetch(url, timeout=20, headers=headers if headers else None)
-            if not result.content or result.error:
-                return items
+                self.last_error = "HTTP 429 限流，请配置 API Key 或稍后重试"
+            else:
+                self.last_error = f"请求失败（{result.error or 'HTTP ' + str(result.status_code)}）"
+            return items
 
         try:
             data = json.loads(result.content)
@@ -190,6 +199,7 @@ class SemanticScholarApi:
                     'authors': author_names
                 })
         except Exception:
+            self.last_error = "返回内容不是有效 JSON"
             return []
 
         return items
@@ -887,6 +897,7 @@ class ApiSourceManager:
     def __init__(self):
         self.sources: List[object] = []
         self._log_messages = []
+        self.last_error = ""
         self._init_sources()
 
     def _log(self, msg: str):
@@ -923,11 +934,17 @@ class ApiSourceManager:
 
     def search_single(self, source_name: str, keywords: List[str],
                       max_results: int = 10) -> List[dict]:
+        self.last_error = ""
         for source in self.sources:
             if source.name == source_name:
                 try:
-                    return source.search(keywords, max_results=max_results)
-                except Exception:
+                    items = source.search(keywords, max_results=max_results)
+                    if not items:
+                        self.last_error = getattr(source, 'last_error', "")
+                    return items
+                except Exception as e:
+                    self.last_error = f"{type(e).__name__}: {e}"
+                    self._log(f"[ApiSource] {source_name} failed: {e}")
                     return []
         return []
 
@@ -958,12 +975,19 @@ class ApiSourceManager:
 
     async def search_single_async(self, source_name: str, keywords: List[str],
                                   max_results: int = 10) -> List[dict]:
+        self.last_error = ""
         for source in self.sources:
             if source.name == source_name:
                 try:
                     if hasattr(source, 'search_async'):
-                        return await source.search_async(keywords, max_results=max_results)
-                    return source.search(keywords, max_results=max_results)
-                except Exception:
+                        items = await source.search_async(keywords, max_results=max_results)
+                    else:
+                        items = source.search(keywords, max_results=max_results)
+                    if not items:
+                        self.last_error = getattr(source, 'last_error', "")
+                    return items
+                except Exception as e:
+                    self.last_error = f"{type(e).__name__}: {e}"
+                    self._log(f"[ApiSource] {source_name} async failed: {e}")
                     return []
         return []

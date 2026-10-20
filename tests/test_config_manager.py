@@ -2,7 +2,7 @@ import unittest
 import json
 import tempfile
 from pathlib import Path
-from config_manager import ConfigManager
+from config_manager import ConfigManager, CONFIG_VERSION
 
 
 class TestConfigManager(unittest.TestCase):
@@ -88,6 +88,51 @@ class TestConfigManager(unittest.TestCase):
         core_missing = [m for m in missing if m["key_name"] == "core"]
         self.assertTrue(len(core_missing) > 0)
         self.assertTrue(core_missing[0]["required"])
+
+    def test_weather_city_is_normalized(self):
+        self.cm.save_config({"weather_city": "  Hangzhou  "})
+        self.assertEqual(self.cm.get_weather_city(), "Hangzhou")
+
+        self.cm.update_weather_city("   ")
+        self.assertEqual(self.cm.get_weather_city(), "Beijing")
+
+    def test_ensure_default_config_migrates_legacy_sources(self):
+        self.cm.save_config({
+            "weather_city": " Hangzhou ",
+            "news_sources": [
+                {"name": "Semantic Scholar", "url": "https://www.semanticscholar.org/",
+                 "type": "web", "enabled": True},
+                {"name": "AMiner", "url": "https://www.aminer.cn/",
+                 "type": "web", "enabled": True},
+            ],
+        })
+
+        self.assertFalse(self.cm.ensure_default_config())
+        config = self.cm.get_config()
+
+        self.assertEqual(config["weather_city"], "Hangzhou")
+        self.assertEqual(config["config_version"], CONFIG_VERSION)
+        semantic = config["news_sources"][0]
+        self.assertEqual(semantic["type"], "api")
+        self.assertEqual(
+            semantic["url"], "https://api.semanticscholar.org/graph/v1/paper/search")
+        self.assertFalse(config["news_sources"][1]["enabled"])
+
+    def test_source_migration_runs_only_once(self):
+        self.cm.save_config({
+            "news_sources": [
+                {"name": "AMiner", "url": "https://www.aminer.cn/",
+                 "type": "web", "enabled": True},
+            ],
+        })
+        self.cm.ensure_default_config()
+
+        config = self.cm.get_config()
+        config["news_sources"][0]["enabled"] = True
+        self.cm.save_config(config)
+
+        self.assertFalse(self.cm.ensure_default_config())
+        self.assertTrue(self.cm.get_config()["news_sources"][0]["enabled"])
 
 
 if __name__ == "__main__":

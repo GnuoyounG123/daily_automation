@@ -6,9 +6,17 @@ Configuration Manager - with categorized academic sources
 
 import json
 import sys
+import os
+import copy
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from datetime import datetime
+from urllib.parse import urlparse
+
+
+CONFIG_VERSION = 1
+SEMANTIC_SCHOLAR_API_URL = "https://api.semanticscholar.org/graph/v1/paper/search"
 
 
 def _get_app_dir() -> Path:
@@ -59,6 +67,24 @@ DEFAULT_TIME_SLOTS = [
     {"label": "9-10节", "start": "19:00", "end": "20:40"},
 ]
 
+DEFAULT_CAMPUS = {
+    "enabled": False,
+    "lms_url": "https://course.zju.edu.cn/",
+    "zdbk_url": "https://zdbk.zju.edu.cn/jwglxt/xtgl/login_slogin.html?language=zh_CN",
+    "public_url": "https://zdbk.zju.edu.cn/jwglxt/xtgl/xwck_cxMoreLoginNews.html",
+    "username": "",
+    "password": "",
+    "remember_password": False,
+    "academic_year": "",
+    "term": "",
+    "grade": "",
+    "college": "",
+    "major": "",
+    "timetable_url": "",
+    "lms_extra_urls": [],
+    "semester_start": "",
+}
+
 WEEKDAY_CN_TO_EN = {
     '周一': 'Monday', '周二': 'Tuesday', '周三': 'Wednesday',
     '周四': 'Thursday', '周五': 'Friday', '周六': 'Saturday', '周日': 'Sunday',
@@ -67,6 +93,10 @@ WEEKDAY_CN_TO_EN = {
     '周1': 'Monday', '周2': 'Tuesday', '周3': 'Wednesday',
     '周4': 'Thursday', '周5': 'Friday', '周6': 'Saturday', '周7': 'Sunday',
 }
+
+
+def _normalize_weather_city(city: Any) -> str:
+    return " ".join(str(city or "").split()) or "Beijing"
 
 
 def _normalize_day(day: str) -> str:
@@ -104,13 +134,22 @@ class ConfigManager:
         return {}
 
     def save_json(self, file_path: Path, data: Dict) -> bool:
+        temporary = None
         try:
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=file_path.parent,
+                                             prefix='.config-', suffix='.tmp', delete=False) as f:
+                temporary = Path(f.name)
                 json.dump(data, f, ensure_ascii=False, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temporary, file_path)
             return True
         except Exception as e:
             print(f"Save failed: {e}")
             return False
+        finally:
+            if temporary and temporary.exists():
+                temporary.unlink()
 
     def backup_config(self, file_path: Path) -> Optional[Path]:
         if not file_path.exists():
@@ -322,11 +361,11 @@ class ConfigManager:
 
     def get_weather_city(self) -> str:
         config = self.get_config()
-        return config.get('weather_city', 'Beijing')
+        return _normalize_weather_city(config.get('weather_city', 'Beijing'))
 
     def update_weather_city(self, city: str) -> bool:
         config = self.get_config()
-        config['weather_city'] = city
+        config['weather_city'] = _normalize_weather_city(city)
         return self.save_config(config)
 
     def get_user_info(self) -> Dict[str, str]:
@@ -334,7 +373,7 @@ class ConfigManager:
         return {
             'university': config.get('university', ''),
             'grade': config.get('grade', ''),
-            'weather_city': config.get('weather_city', 'Beijing')
+            'weather_city': _normalize_weather_city(config.get('weather_city', 'Beijing'))
         }
 
     def update_user_info(self, university: str = None, grade: str = None, weather_city: str = None) -> bool:
@@ -344,7 +383,7 @@ class ConfigManager:
         if grade is not None:
             config['grade'] = grade
         if weather_city is not None:
-            config['weather_city'] = weather_city
+            config['weather_city'] = _normalize_weather_city(weather_city)
         return self.save_config(config)
 
     def get_time_slots(self) -> List[Dict]:
@@ -424,6 +463,7 @@ class ConfigManager:
 
     def reset_to_default(self) -> Dict:
         default_config = {
+            "config_version": CONFIG_VERSION,
             "news_sources": DEFAULT_NEWS_SOURCES,
             "time_slots": DEFAULT_TIME_SLOTS,
             "reminders": [
@@ -451,23 +491,77 @@ class ConfigManager:
                 "qweather": ""
             },
             "weather_city": "Beijing",
+            "campus": copy.deepcopy(DEFAULT_CAMPUS),
+            "deepseek": {"model": "deepseek-flash", "api_key": ""},
+            "dingtalk": {"client_id": "", "client_secret": "", "allowed_sender_ids": []},
             "university": "",
             "grade": ""
         }
         self.save_config(default_config)
         return default_config
 
+    def _migrate_news_sources(self, config: Dict) -> bool:
+        changed = False
+        sources = config.get('news_sources')
+        if not isinstance(sources, list):
+            return False
+        for source in sources:
+            if not isinstance(source, dict):
+                continue
+            name = str(source.get('name', '')).strip().lower()
+            domain = urlparse(str(source.get('url', ''))).netloc.lower()
+            if source.get('type') == 'web' and (
+                    'semanticscholar.org' in domain or name == 'semantic scholar'):
+                source['url'] = SEMANTIC_SCHOLAR_API_URL
+                source['type'] = 'api'
+                source.setdefault('category', 'cs_ai')
+                source.setdefault('desc', 'AI academic paper search engine')
+                changed = True
+            if 'aminer.cn' in domain or (name == 'aminer' and source.get('type') == 'web'):
+                if source.get('enabled', True):
+                    source['enabled'] = False
+                    changed = True
+                if 'desc' not in source:
+                    source['desc'] = 'AMiner 暂未提供免密钥 API，当前版本已停用'
+                    changed = True
+        return changed
+
     def ensure_default_config(self) -> bool:
-        created = False
         if not self.config_file.exists():
             self.reset_to_default()
             return True
         config = self.get_config()
+        changed = False
         if 'time_slots' not in config:
             config['time_slots'] = DEFAULT_TIME_SLOTS
+            changed = True
+        for key, default in (
+            ("campus", DEFAULT_CAMPUS),
+            ("deepseek", {"model": "deepseek-flash", "api_key": ""}),
+            ("dingtalk", {"client_id": "", "client_secret": "", "allowed_sender_ids": []}),
+        ):
+            if key not in config:
+                config[key] = copy.deepcopy(default)
+                changed = True
+        campus = config.get("campus")
+        if isinstance(campus, dict):
+            # Add newly introduced campus keys without touching user values.
+            for key, value in DEFAULT_CAMPUS.items():
+                if key not in campus:
+                    campus[key] = list(value) if isinstance(value, list) else value
+                    changed = True
+        normalized_city = _normalize_weather_city(config.get('weather_city', 'Beijing'))
+        if normalized_city != config.get('weather_city'):
+            config['weather_city'] = normalized_city
+            changed = True
+        if config.get('config_version', 0) < CONFIG_VERSION:
+            if self._migrate_news_sources(config):
+                changed = True
+            config['config_version'] = CONFIG_VERSION
+            changed = True
+        if changed:
             self.save_config(config)
-            created = True
-        return created
+        return False
 
     def ensure_default_schedule(self) -> bool:
         if not self.schedule_file.exists():

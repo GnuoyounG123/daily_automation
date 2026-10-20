@@ -61,6 +61,7 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 def load_config():
     from .config_manager import ConfigManager
     cm = ConfigManager(CONFIG_DIR)
+    cm.ensure_default_config()
     config = cm.get_config()
     if not config:
         config = cm.reset_to_default()
@@ -133,9 +134,14 @@ class WeatherAPI:
     FREE_API_URL = "https://wttr.in/{city}?format=j1"
 
     @staticmethod
+    def _normalize_city(city):
+        return " ".join(str(city or "").split()) or "Beijing"
+
+    @staticmethod
     def get_weather(city="Beijing"):
         try:
-            url = WeatherAPI.FREE_API_URL.format(city=city)
+            city = WeatherAPI._normalize_city(city)
+            url = WeatherAPI.FREE_API_URL.format(city=quote(city, safe=""))
             req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req, timeout=10) as response:
                 data = json.loads(response.read().decode('utf-8'))
@@ -488,8 +494,8 @@ class InfoCrawler:
     def _get_manual_suggestion(self, source):
         domain = urlparse(source['url']).netloc.lower()
         suggestions = {
-            'semanticscholar.org': 'Semantic Scholar has a public API, consider configuring an API Key',
-            'aminer.cn': 'AMiner requires JS rendering, consider changing source type to "api"',
+            'semanticscholar.org': 'Semantic Scholar 公共 API 有频率限制，建议配置 API Key 或稍后重试',
+            'aminer.cn': 'AMiner 当前没有免密钥 API，建议保持停用或改用其他学术源',
             'thegradient.pub': 'Consider checking if the RSS feed is available',
         }
         for d, s in suggestions.items():
@@ -519,7 +525,11 @@ class InfoCrawler:
             if items:
                 self._log(f"{source_name} API got {len(items)} items")
                 return items
-            self._log(f"[API] No results, trying other strategies", "WARNING")
+            reason = self.api_manager.last_error
+            if reason:
+                self._mark_failed(source, reason)
+            else:
+                self._log(f"[API] {source_name} 近期没有匹配论文", "WARNING")
             return items
 
         if source_type == 'rss':
@@ -629,7 +639,11 @@ class InfoCrawler:
             if items:
                 self._log(f"{source_name} async API got {len(items)} items")
                 return items
-            self._log(f"[Async] API no results", "WARNING")
+            reason = self.api_manager.last_error
+            if reason:
+                self._mark_failed(source, reason)
+            else:
+                self._log(f"[Async] {source_name} 近期没有匹配论文", "WARNING")
             return items
 
         if source_type in ('rss', 'json', 'web'):

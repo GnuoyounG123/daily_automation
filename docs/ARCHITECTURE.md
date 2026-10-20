@@ -13,6 +13,7 @@ cleanly.
 | Launcher | `launcher.py` -> `src/daily_automation/launcher.py` | Starts the local web server or runs backend tasks from a menu/script |
 | Desktop GUI | `gui_app.py` -> `src/daily_automation/gui_app.py` | Optional Tkinter/PyInstaller desktop application |
 | CLI | `daily_assistant.py` -> `src/daily_automation/daily_assistant.py` | Crawl, process, report, email, and reminder workflows |
+| Campus CLI | `campus_monitor.py` -> `src/daily_automation/campus_cli.py` | Campus login, sync, daily run, DingTalk listener, status, and readiness doctor |
 | Installer | `installer.py` -> `src/daily_automation/installer.py` | Windows installation and scheduled task setup |
 
 ## Core modules
@@ -28,6 +29,28 @@ cleanly.
 | Parsing | `src/daily_automation/html_parser.py` | HTML, RSS, and fallback parsing strategies |
 | Academic APIs | `src/daily_automation/api_sources.py` | Semantic Scholar, DBLP, OpenAlex, CrossRef, and related APIs |
 | Schedule | `src/daily_automation/schedule_manager.py` | Course/task schedule loading and email plan output |
+| Campus service | `src/daily_automation/campus_service.py` | Campus sync orchestration, summaries, planning, and deduplicated mail |
+| Campus API client | `src/daily_automation/campus_cas.py` | ZJU CAS login, ZDBK timetable and LMS todo retrieval, parsers, read-only credential probe |
+| Campus sources | `src/daily_automation/campus_sources.py` | Dedicated Chrome profile, login detection, notice and timetable collection (browser fallback) |
+| Campus diagnostics | `src/daily_automation/campus_diagnostics.py` | Read-only readiness checks for credentials, sources, and task installation |
+| DingTalk intake | `src/daily_automation/dingtalk_listener.py` | Official Stream single-chat listener, allowlist, confirmation replies, heartbeat |
+| Notice store | `src/daily_automation/notice_store.py` | SQLite notices, revisions, action items, source state, and mail ledger |
+| Notice processing | `src/daily_automation/notice_processing.py` | DeepSeek JSON summaries, deadline evidence validation, start-date suggestions |
+| Course calendar | `src/daily_automation/course_calendar.py` | Week and odd/even-week timetable parsing |
+| Notice links | `src/daily_automation/notice_links.py` | Public HTTPS notice body fetching |
+
+## Campus sync strategy
+
+`campus_service.sync()` is API-first. When a Fernet-encrypted remembered
+password and a supported term are configured, it logs in through CAS, fetches
+the ZDBK timetable and LMS todos, and stores them under the same source IDs as
+the browser collector. The browser profile is only used for pages the APIs do
+not cover (public notices, private notice pages) or as a fallback when API
+login/collection fails.
+
+The browser fallback never persists SSO or service cookies. Timetable writes
+are guarded: an empty result or a result less than half the previous course
+count keeps the old timetable unless the academic term changed.
 
 ## Repository zones
 
